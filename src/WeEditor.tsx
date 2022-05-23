@@ -11,32 +11,51 @@ interface WeEditorProps {
   maxLength?: number;
 }
 
-const WeEditor: React.FC<WeEditorProps> = ({
-  htmlString = '',
-  setHTMLString = undefined,
-  className = '',
-  placeholder = '',
-  autofocus = false,
-  disabled = false,
-  maxLength,
-}) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+interface WeEditorRef {
+  getHTMLString: () => string | null;
+}
 
-  const getHTMLString = () => containerRef.current && containerRef.current.innerHTML;
+const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
+  (
+    {
+      htmlString = '',
+      setHTMLString = undefined,
+      className = '',
+      placeholder = '',
+      autofocus = false,
+      disabled = false,
+      maxLength,
+    },
+    ref
+  ) => {
+    const containerRef = useRef<HTMLDivElement | null>(null);
 
-  return (
-    <Container
-      contentEditable
-      ref={containerRef}
-      onInput={(event) => {
-        if (setHTMLString) {
-          setHTMLString(event.currentTarget.innerHTML);
-        }
-      }}
-    />
-  );
-};
+    const getHTMLString = () => containerRef.current && containerRef.current.innerHTML;
+
+    React.useImperativeHandle(ref, () => ({
+      getHTMLString,
+    }));
+
+    useEffect(() => {
+      document.addEventListener('selectionchange', () => {});
+
+      return () => {
+        document.removeEventListener('selectionchange', () => {});
+      };
+    }, []);
+
+    return (
+      <div
+        contentEditable
+        ref={containerRef}
+        onInput={(event) => {
+          if (setHTMLString) {
+            setHTMLString(event.currentTarget.innerHTML);
+          }
+        }}
+      />
+    );
+  }
+);
 
 export default WeEditor;
-
-const Container = styled.div``;

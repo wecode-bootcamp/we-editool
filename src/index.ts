@@ -1,3 +1,1 @@
-import WeEditor from './WeEditor';
-
-export default WeEditor;
+export { default } from './WeEditor';

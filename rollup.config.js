@@ -1,18 +1,15 @@
 import typescript from 'rollup-plugin-typescript2';
 import resolve from '@rollup/plugin-node-resolve';
-import pkg from './package.json';
+import packageJSON from './package.json';
 
 export default {
-  input: 'src/index.tsx',
+  input: 'src/index.ts',
   output: [
     {
-      file: pkg.main,
+      file: packageJSON.main,
       format: 'cjs',
-      exports: 'named',
-      sourcemap: true,
-      strict: false,
     },
   ],
-  plugins: [resolve({ extensions: ['.tsx', '.ts'] }), typescript({ objectHashIgnoreUnknownHack: false })],
-  external: ['react', '@emotion/styled'],
+  plugins: [typescript({ abortOnError: false }), resolve()],
+  external: ['react', '@emotion/styled', 'react-icons'],
 };
