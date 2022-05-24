@@ -1,7 +1,25 @@
-import React, { useEffect, useRef } from 'react';
-import styled from '@emotion/styled';
+import React, { useCallback, useEffect, useRef } from 'react';
 
-interface WeEditorProps {
+export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
+  ({ htmlString, setHTMLString, className, placeholder, autofocus, disabled, maxLength }, forwardedRef) => {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const { onInput } = useInput({ setHTMLString });
+
+    useSelection();
+
+    React.useImperativeHandle(forwardedRef, () => ({
+      getHTMLString: () => containerRef.current && containerRef.current.innerHTML,
+    }));
+
+    return <div contentEditable ref={containerRef} onInput={onInput} />;
+  }
+);
+
+export interface WeEditorRef {
+  getHTMLString: () => string | null;
+}
+
+export interface WeEditorProps {
   htmlString?: string;
   setHTMLString?: React.Dispatch<React.SetStateAction<string>>;
   className?: string;
@@ -11,51 +29,28 @@ interface WeEditorProps {
   maxLength?: number;
 }
 
-interface WeEditorRef {
-  getHTMLString: () => string | null;
+interface UseInputProps {
+  setHTMLString?: React.Dispatch<React.SetStateAction<string>>;
+}
+function useInput({ setHTMLString }: UseInputProps) {
+  const onInput = useCallback(
+    (event: React.FormEvent<HTMLDivElement>) => {
+      if (setHTMLString) {
+        setHTMLString(event.currentTarget.innerHTML);
+      }
+    },
+    [setHTMLString]
+  );
+
+  return { onInput };
 }
 
-const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
-  (
-    {
-      htmlString = '',
-      setHTMLString = undefined,
-      className = '',
-      placeholder = '',
-      autofocus = false,
-      disabled = false,
-      maxLength,
-    },
-    ref
-  ) => {
-    const containerRef = useRef<HTMLDivElement | null>(null);
-
-    const getHTMLString = () => containerRef.current && containerRef.current.innerHTML;
-
-    React.useImperativeHandle(ref, () => ({
-      getHTMLString,
-    }));
-
-    useEffect(() => {
-      document.addEventListener('selectionchange', () => {});
-
-      return () => {
-        document.removeEventListener('selectionchange', () => {});
-      };
-    }, []);
-
-    return (
-      <div
-        contentEditable
-        ref={containerRef}
-        onInput={(event) => {
-          if (setHTMLString) {
-            setHTMLString(event.currentTarget.innerHTML);
-          }
-        }}
-      />
-    );
-  }
-);
-
-export default WeEditor;
+function useSelection() {
+  useEffect(() => {
+    const selectCB = () => {};
+    document.addEventListener('select', selectCB);
+    return () => {
+      document.removeEventListener('select', selectCB);
+    };
+  }, []);
+}

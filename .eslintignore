@@ -1,3 +1,6 @@
 node_modules
+
 rollup.config.js
+jest.config.js
+
 dist

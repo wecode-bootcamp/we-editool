@@ -1,47 +1,51 @@
 {
   "name": "we-editor",
   "version": "1.0.0",
-  "description": "light-weight and simple markdown editor!",
+  "description": "light-weight, tagless and simple text editor!",
   "main": "dist/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wecode-bootcamp/we-editor.git"
   },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rollup -c",
     "start": "rollup -c -w",
-    "lint": "eslint './src/**/*.{ts,tsx,js,jsx}'",
-    "lint:fix": "eslint --fix './src/**/*.{ts,tsx,js,jsx}'",
+    "test": "jest",
+    "lint": "eslint './src/**/*.{ts,tsx}'",
+    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'",
     "prettier": "prettier --write --config ./.prettierrc './src/**/*.{ts,tsx}'"
   },
-  "license": "MIT",
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^13.3.0",
-    "@types/react": "^18.0.9",
-    "@typescript-eslint/eslint-plugin": "^5.25.0",
-    "@typescript-eslint/parser": "^5.25.0",
-    "babel-core": "^6.26.3",
-    "babel-runtime": "^6.26.0",
-    "eslint": "^8.15.0",
-    "eslint-config-airbnb": "^19.0.4",
-    "eslint-config-airbnb-typescript": "^17.0.0",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-import": "^2.26.0",
-    "eslint-plugin-jsx-a11y": "^6.5.1",
-    "eslint-plugin-prettier": "^4.0.0",
-    "eslint-plugin-react": "^7.30.0",
-    "eslint-plugin-react-hooks": "^4.5.0",
-    "prettier": "^2.6.2",
-    "rollup": "^2.74.1",
-    "rollup-plugin-typescript2": "^0.31.2",
-    "typescript": "^4.6.4"
+    "@types/jest": "27.5.1",
+    "@types/react": "18.0.9",
+    "@typescript-eslint/eslint-plugin": "5.25.0",
+    "@typescript-eslint/parser": "5.25.0",
+    "eslint": "8.15.0",
+    "eslint-config-airbnb": "19.0.4",
+    "eslint-config-airbnb-typescript": "17.0.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-jsx-a11y": "6.5.1",
+    "eslint-plugin-prettier": "4.0.0",
+    "eslint-plugin-react": "7.30.0",
+    "eslint-plugin-react-hooks": "4.5.0",
+    "jest": "28.1.0",
+    "jest-environment-jsdom": "28.1.0",
+    "prettier": "2.6.2",
+    "rollup": "2.74.1",
+    "rollup-plugin-analyzer": "4.0.0",
+    "rollup-plugin-typescript2": "0.31.2",
+    "ts-jest": "28.0.3",
+    "typescript": "4.6.4"
   },
   "dependencies": {
-    "@emotion/styled": "^11.8.1",
-    "react": "^18.1.0",
-    "react-icons": "^4.3.1"
-  },
-  "files": [
-    "dist"
-  ]
+    "@emotion/react": "11.9.0",
+    "@emotion/styled": "11.8.1",
+    "react": "18.1.0",
+    "react-icons": "4.3.1"
+  }
 }
