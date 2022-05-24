@@ -1,5 +1,5 @@
 import typescript from 'rollup-plugin-typescript2';
-import resolve from '@rollup/plugin-node-resolve';
+import analyze from 'rollup-plugin-analyzer';
 import packageJSON from './package.json';
 
 export default {
@@ -10,6 +10,13 @@ export default {
       format: 'cjs',
     },
   ],
-  plugins: [typescript({ abortOnError: false }), resolve()],
+  plugins: [
+    typescript({ abortOnError: false }),
+    analyze({
+      // TODO: Add size_limit for CI
+      onAnalysis: ({ bundleSize }) => {},
+      summaryOnly: true,
+    }),
+  ],
   external: ['react', '@emotion/styled', 'react-icons'],
 };
