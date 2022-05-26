@@ -19,5 +19,5 @@
     "noUnusedParameters": false,
     "allowSyntheticDefaultImports": true
   },
-  "exclude": ["dist", "__tests__"]
+  "include": ["src", "__tests__"]
 }
