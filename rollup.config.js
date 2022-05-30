@@ -11,7 +11,7 @@ export default {
     },
   ],
   plugins: [
-    typescript({ abortOnError: false }),
+    typescript({ abortOnError: false, tsconfigOverride: { exclude: ['__tests__'] } }),
     analyze({
       // TODO: Add size_limit for CI
       onAnalysis: ({ bundleSize }) => {},

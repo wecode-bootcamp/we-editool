@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import * as React from 'react';
 import Toolbar from './Toolbar';
 
 export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
   ({ htmlString, setHTMLString, className, placeholder, autofocus, disabled, maxLength }, forwardedRef) => {
-    const containerRef = useRef<HTMLDivElement | null>(null);
+    const containerRef = React.useRef<HTMLDivElement | null>(null);
     const { onInput } = useInput({ setHTMLString });
 
     useSelection();
@@ -39,7 +39,7 @@ interface UseInputProps {
   setHTMLString?: React.Dispatch<React.SetStateAction<string>>;
 }
 function useInput({ setHTMLString }: UseInputProps) {
-  const onInput = useCallback(
+  const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
       if (setHTMLString) {
         setHTMLString(event.currentTarget.innerHTML);
@@ -52,7 +52,7 @@ function useInput({ setHTMLString }: UseInputProps) {
 }
 
 function useSelection() {
-  useEffect(() => {
+  React.useEffect(() => {
     const selectCB = () => {};
     document.addEventListener('select', selectCB);
     return () => {

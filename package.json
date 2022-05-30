@@ -14,12 +14,14 @@
   "scripts": {
     "build": "rollup -c",
     "start": "rollup -c -w",
-    "test": "jest",
+    "test": "jest -i",
+    "test:cov": "jest -i --coverage",
     "lint": "eslint './src/**/*.{ts,tsx}'",
     "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'",
     "prettier": "prettier --write --config ./.prettierrc './src/**/*.{ts,tsx}'"
   },
   "devDependencies": {
+    "@testing-library/react": "13.2.0",
     "@types/jest": "27.5.1",
     "@types/react": "18.0.9",
     "@typescript-eslint/eslint-plugin": "5.25.0",
@@ -36,6 +38,7 @@
     "jest": "28.1.0",
     "jest-environment-jsdom": "28.1.0",
     "prettier": "2.6.2",
+    "react-dom": "18.1.0",
     "rollup": "2.74.1",
     "rollup-plugin-analyzer": "4.0.0",
     "rollup-plugin-typescript2": "0.31.2",
