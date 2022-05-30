@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import Toolbar from './Toolbar';
 
 export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
   ({ htmlString, setHTMLString, className, placeholder, autofocus, disabled, maxLength }, forwardedRef) => {
@@ -11,7 +12,12 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
       getHTMLString: () => containerRef.current && containerRef.current.innerHTML,
     }));
 
-    return <div contentEditable ref={containerRef} onInput={onInput} />;
+    return (
+      <>
+        <div id="weEditorContainer" contentEditable ref={containerRef} onInput={onInput} />
+        <Toolbar containerRef={containerRef} />
+      </>
+    );
   }
 );
 
