@@ -37,7 +37,7 @@ function Toolbar({ containerRef }: ToolbarProps) {
   }, []);
 
   const calculateToolBarPosition = () => {
-    const selection: Selection | null = window.getSelection();
+    const selection = window.getSelection();
 
     if (selection && selection.type === 'Range') {
       const range = selection.getRangeAt(0);
