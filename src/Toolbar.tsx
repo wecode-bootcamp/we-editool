@@ -22,18 +22,19 @@ function Toolbar({ containerRef }: ToolbarProps) {
         setShowToolbar(false);
       }
 
-      if (selection && selection.type === 'Range') {
-        const range = selection.getRangeAt(0);
-        if (containerRef.current && containerRef.current.contains(range.commonAncestorContainer)) {
-          calculateToolBarPosition();
-        } else {
-          setShowToolbar(false);
-        }
-      } else {
-        setShowToolbar(false);
-      }
-    });
-  }, [containerRef]);
+  useEffect(() => {
+    const cb = () => {
+      const selection = window.getSelection();
+
+      console.log(selection?.toString());
+    };
+
+    document.addEventListener("selectionchange", cb);
+
+    return () => {
+      document.removeEventListener("selectionchange", cb);
+    };
+  }, []);
 
   const calculateToolBarPosition = () => {
     const selection: Selection | null = window.getSelection();
