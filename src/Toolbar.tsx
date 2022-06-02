@@ -18,7 +18,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
   const toolbarRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    const cb = () => {
+    const selectionChangeCallback = () => {
       const selection = window.getSelection();
       if (selection?.type !== 'Range') {
         setShowToolbar(false);
@@ -32,10 +32,10 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
       changeToolBarPosition();
     };
 
-    document.addEventListener('selectionchange', cb);
+    document.addEventListener('selectionchange', selectionChangeCallback);
 
     return () => {
-      document.removeEventListener('selectionchange', cb);
+      document.removeEventListener('selectionchange', selectionChangeCallback);
     };
   }, []);
 
@@ -371,7 +371,12 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
     }
   };
 
-  const setLink = () => {};
+  const setLink = () => {
+    const url = prompt('URL을 입력하세요', '');
+    if (url?.length && url.length > 0) {
+      document.execCommand('createLink', false, url);
+    }
+  };
 
   return (
     <ToolbarWrapper toolbarRef={toolbarRef} showToolbar={showToolbar} toolbarPosition={toolbarPosition}>
