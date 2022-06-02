@@ -5,6 +5,47 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
   ({ htmlString, setHTMLString, className, placeholder, autofocus, disabled, maxLength }, forwardedRef) => {
     const containerRef = React.useRef<HTMLDivElement | null>(null);
     const { onInput } = useInput({ setHTMLString });
+    const [undoList, setUndoList] = React.useState<string[]>(['']);
+
+    React.useEffect(() => {
+      if (containerRef?.current) {
+        containerRef.current.onkeyup = () => {
+          const a = document.activeElement;
+          if (a?.lastChild?.nodeName !== 'BR') {
+            a?.appendChild(document.createElement('br'));
+          }
+        };
+        containerRef.current.onkeydown = (e) => {
+          const ctrlZFunction = () => {
+            if (undoList.length > 0) containerRef.current!.innerHTML = undoList.pop()!;
+            setUndoList(undoList);
+            console.log(undoList);
+          };
+
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+            e.preventDefault();
+            ctrlZFunction();
+          }
+
+          if (e.key === 'Enter') {
+            e.preventDefault();
+
+            const selection = window.getSelection();
+            const range = selection?.getRangeAt(0);
+            if (range?.commonAncestorContainer?.parentElement?.id === 'weEditorContainer') {
+              const br = document.createElement('br');
+              range?.deleteContents();
+              range?.insertNode(br);
+              range?.setStartAfter(br);
+              range?.setEndAfter(br);
+              range?.collapse(false);
+              selection?.removeAllRanges();
+              if (range) selection?.addRange(range);
+            }
+          }
+        };
+      }
+    }, []);
 
     useSelection();
 
@@ -14,8 +55,17 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
 
     return (
       <>
-        <div id="weEditorContainer" contentEditable ref={containerRef} onInput={onInput} />
-        <Toolbar containerRef={containerRef} />
+        <div
+          id="weEditorContainer"
+          contentEditable
+          ref={containerRef}
+          onInput={(e) => {
+            onInput(e);
+            if (containerRef.current?.innerHTML) undoList.push(containerRef.current.innerHTML);
+            setUndoList(undoList);
+          }}
+        />
+        <Toolbar containerRef={containerRef} setUndoList={setUndoList} undoList={undoList} />
       </>
     );
   }
