@@ -1,5 +1,6 @@
 import * as React from 'react';
 import Toolbar from './Toolbar';
+import { WE_EDITOR_ID } from './const';
 
 export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
   ({ htmlString, setHTMLString, className, placeholder, autofocus, disabled, maxLength }, forwardedRef) => {
@@ -33,7 +34,7 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
 
             const selection = window.getSelection();
             const range = selection?.getRangeAt(0);
-            if (range?.commonAncestorContainer?.parentElement?.id === 'weEditorContainer') {
+            if (range?.commonAncestorContainer?.parentElement?.id === WE_EDITOR_ID) {
               const br = document.createElement('br');
               range?.deleteContents();
               range?.insertNode(br);
@@ -66,7 +67,7 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
         <div
           className={className}
           placeholder={placeholder}
-          id="weEditorContainer"
+          id={WE_EDITOR_ID}
           contentEditable={disabled}
           ref={containerRef}
           onInput={(e) => {
