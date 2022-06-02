@@ -1,55 +1,61 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-multi-assign */
 /* eslint-disable prefer-destructuring */
-import React, { useRef, useState, useEffect } from 'react';
+import * as React from 'react';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
 import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
 
 interface ToolbarProps {
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
+  setUndoList: React.Dispatch<React.SetStateAction<string[]>>;
+  undoList: string[];
 }
 
-function Toolbar({ containerRef }: ToolbarProps) {
-  const [toolbarPosition, setToolbarPosition] = useState<[number, number]>([0, 0]);
-  const [showToolbar, setShowToolbar] = useState<boolean>(false);
-  const toolbarRef = useRef<HTMLDivElement | null>(null);
+function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
+  const [toolbarPosition, setToolbarPosition] = React.useState<[number, number]>([0, 0]);
+  const [showToolbar, setShowToolbar] = React.useState<boolean>(false);
+  const toolbarRef = React.useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    document.addEventListener('pointerup', (e) => {
-      const selection: Selection | null = window.getSelection();
-
-      if (selection && selection.type === 'Caret') {
-        setShowToolbar(false);
-      }
-
-  useEffect(() => {
+  React.useEffect(() => {
     const cb = () => {
       const selection = window.getSelection();
-
-      console.log(selection?.toString());
+      if (selection?.type !== 'Range') {
+        setShowToolbar(false);
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      if (!containerRef?.current?.contains(range.commonAncestorContainer)) {
+        setShowToolbar(false);
+        return;
+      }
+      changeToolBarPosition();
     };
 
-    document.addEventListener("selectionchange", cb);
+    document.addEventListener('selectionchange', cb);
 
     return () => {
-      document.removeEventListener("selectionchange", cb);
+      document.removeEventListener('selectionchange', cb);
     };
   }, []);
 
-  const calculateToolBarPosition = () => {
+  const changeToolBarPosition = () => {
     const selection = window.getSelection();
 
-    if (selection && selection.type === 'Range') {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
-      setShowToolbar(true);
-    } else {
+    if (selection?.type !== 'Range') {
       setShowToolbar(false);
+      return;
     }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
+    setShowToolbar(true);
   };
 
   interface TextSegmentInfo {
+    br: boolean;
     bold: boolean;
     underline: boolean;
     italic: boolean;
@@ -58,42 +64,31 @@ function Toolbar({ containerRef }: ToolbarProps) {
     index: number;
   }
   const getTextSegments = (selection: Selection): TextSegmentInfo[] | null => {
-    if (containerRef.current && selection.type === 'Range') {
-      let startContainerParentNode = selection.getRangeAt(0).startContainer.parentNode;
-      let endContainerParentNode = selection.getRangeAt(0).endContainer.parentNode;
+    if (containerRef?.current && selection?.type === 'Range') {
+      let startContainerParentNode = selection.getRangeAt(0).startContainer.parentElement;
+      let endContainerParentNode = selection.getRangeAt(0).endContainer.parentElement;
 
       let firstIndex = 0;
       let lastIndex = 0;
 
-      if (
-        (startContainerParentNode as Element).id &&
-        (startContainerParentNode as Element).id === 'weEditorContainer'
-      ) {
+      if (startContainerParentNode?.id && startContainerParentNode?.id === 'weEditorContainer') {
         firstIndex = Array.prototype.indexOf.call(
           containerRef.current.childNodes,
           selection.getRangeAt(0).startContainer
         );
       } else {
-        while (
-          startContainerParentNode &&
-          (startContainerParentNode.parentNode as Element).id &&
-          (startContainerParentNode.parentNode as Element).id !== 'weEditorContainer'
-        ) {
-          startContainerParentNode = startContainerParentNode.parentNode;
+        while (startContainerParentNode?.parentElement?.id !== 'weEditorContainer') {
+          if (startContainerParentNode) startContainerParentNode = startContainerParentNode?.parentElement;
         }
 
         firstIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, startContainerParentNode);
       }
 
-      if ((endContainerParentNode as Element).id && (endContainerParentNode as Element).id === 'weEditorContainer') {
+      if (endContainerParentNode?.id && endContainerParentNode.id === 'weEditorContainer') {
         lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, selection.getRangeAt(0).endContainer);
       } else {
-        while (
-          endContainerParentNode &&
-          (endContainerParentNode.parentNode as Element).id &&
-          (endContainerParentNode.parentNode as Element).id !== 'weEditorContainer'
-        ) {
-          endContainerParentNode = endContainerParentNode.parentNode;
+        while (endContainerParentNode?.parentElement?.id !== 'weEditorContainer') {
+          if (endContainerParentNode) endContainerParentNode = endContainerParentNode.parentElement;
         }
 
         lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, endContainerParentNode);
@@ -103,6 +98,7 @@ function Toolbar({ containerRef }: ToolbarProps) {
       for (let i = firstIndex; i <= lastIndex; i += 1) {
         let node = containerRef.current.childNodes[i];
         const textSegmentInfo: TextSegmentInfo = {
+          br: false,
           bold: false,
           underline: false,
           italic: false,
@@ -111,6 +107,10 @@ function Toolbar({ containerRef }: ToolbarProps) {
           index: i,
         };
         while (node.nodeType !== 3) {
+          if (node.nodeName === 'BR') {
+            textSegmentInfo.br = true;
+            break;
+          }
           if (node.nodeName === 'B') {
             textSegmentInfo.bold = true;
           } else if (node.nodeName === 'U') {
@@ -167,7 +167,7 @@ function Toolbar({ containerRef }: ToolbarProps) {
       }
       let allTextisbold = true;
       for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (textSegments[i].bold !== true) {
+        if (!textSegments[i].br && !textSegments[i].bold) {
           allTextisbold = false;
           break;
         }
@@ -193,11 +193,15 @@ function Toolbar({ containerRef }: ToolbarProps) {
       const range = selection.getRangeAt(0);
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-        if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
+        let newElement;
+        let lastElement;
+
+        if (textSegments[i].br) {
+          lastElement = newElement = document.createElement('br');
+          if (newElement) range.insertNode(newElement);
+        } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
           range.insertNode(document.createTextNode(textSegments[i].text));
         } else {
-          let newElement;
-          let lastElement;
           if (textSegments[i].bold) {
             lastElement = newElement = document.createElement('b');
           }
@@ -222,6 +226,9 @@ function Toolbar({ containerRef }: ToolbarProps) {
         }
       }
     }
+
+    if (containerRef.current?.innerHTML) undoList.push(containerRef.current.innerHTML);
+    setUndoList(undoList);
   };
 
   const setUnderLine = () => {
@@ -231,15 +238,15 @@ function Toolbar({ containerRef }: ToolbarProps) {
       if (!textSegments) {
         return;
       }
-      let allTextisUnderline = true;
+      let allTextisUnderLine = true;
       for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (textSegments[i].underline !== true) {
-          allTextisUnderline = false;
+        if (!textSegments[i].br && !textSegments[i].underline) {
+          allTextisUnderLine = false;
           break;
         }
       }
 
-      if (allTextisUnderline === true) {
+      if (allTextisUnderLine === true) {
         for (let i = 1; i < textSegments.length - 1; i += 1) {
           textSegments[i].underline = false;
         }
@@ -259,11 +266,15 @@ function Toolbar({ containerRef }: ToolbarProps) {
       const range = selection.getRangeAt(0);
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-        if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
+        let newElement;
+        let lastElement;
+
+        if (textSegments[i].br) {
+          lastElement = newElement = document.createElement('br');
+          if (newElement) range.insertNode(newElement);
+        } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
           range.insertNode(document.createTextNode(textSegments[i].text));
         } else {
-          let newElement;
-          let lastElement;
           if (textSegments[i].bold) {
             lastElement = newElement = document.createElement('b');
           }
@@ -299,7 +310,7 @@ function Toolbar({ containerRef }: ToolbarProps) {
       }
       let allTextisItalic = true;
       for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (textSegments[i].italic !== true) {
+        if (!textSegments[i].br && !textSegments[i].italic) {
           allTextisItalic = false;
           break;
         }
@@ -325,11 +336,15 @@ function Toolbar({ containerRef }: ToolbarProps) {
       const range = selection.getRangeAt(0);
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-        if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
+        let newElement;
+        let lastElement;
+
+        if (textSegments[i].br) {
+          lastElement = newElement = document.createElement('br');
+          if (newElement) range.insertNode(newElement);
+        } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
           range.insertNode(document.createTextNode(textSegments[i].text));
         } else {
-          let newElement;
-          let lastElement;
           if (textSegments[i].bold) {
             lastElement = newElement = document.createElement('b');
           }
