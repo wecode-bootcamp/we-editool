@@ -8,6 +8,8 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
     const [undoList, setUndoList] = React.useState<string[]>(['']);
 
     React.useEffect(() => {
+      if (autofocus) containerRef?.current?.focus();
+
       if (containerRef?.current) {
         containerRef.current.onkeyup = () => {
           const a = document.activeElement;
@@ -19,7 +21,6 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
           const ctrlZFunction = () => {
             if (undoList.length > 0) containerRef.current!.innerHTML = undoList.pop()!;
             setUndoList(undoList);
-            console.log(undoList);
           };
 
           if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
@@ -47,6 +48,13 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
       }
     }, []);
 
+    function insertImage() {
+      const url = prompt('이미지 URL을 입력하세요', '');
+      if (url?.length && url.length > 0) {
+        document.execCommand('insertImage', false, url);
+      }
+    }
+
     useSelection();
 
     React.useImperativeHandle(forwardedRef, () => ({
@@ -56,8 +64,10 @@ export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
     return (
       <>
         <div
+          className={className}
+          placeholder={placeholder}
           id="weEditorContainer"
-          contentEditable
+          contentEditable={disabled}
           ref={containerRef}
           onInput={(e) => {
             onInput(e);
