@@ -5,6 +5,9 @@ import * as React from 'react';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
 import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
+import { ToolbarPostion } from './type';
+import { WE_EDITOR_ID, TEXT_NODE_TYPE, BR_NAME, SELECTION_RANGE } from './const';
+import useSelection from './useSelection';
 
 interface ToolbarProps {
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
@@ -13,44 +16,37 @@ interface ToolbarProps {
 }
 
 function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
-  const [toolbarPosition, setToolbarPosition] = React.useState<[number, number]>([0, 0]);
+  const [toolbarPosition, setToolbarPosition] = React.useState<ToolbarPostion>([0, 0]);
   const [showToolbar, setShowToolbar] = React.useState<boolean>(false);
   const toolbarRef = React.useRef<HTMLDivElement | null>(null);
+  const { range, isSelectRange } = useSelection();
 
   React.useEffect(() => {
-    const selectionChangeCallback = () => {
-      const selection = window.getSelection();
-      if (selection?.type !== 'Range') {
-        setShowToolbar(false);
-        return;
-      }
-      const range = selection.getRangeAt(0);
-      if (!containerRef?.current?.contains(range.commonAncestorContainer)) {
-        setShowToolbar(false);
-        return;
-      }
-      changeToolBarPosition();
-    };
+    if (!isSelectRange) {
+      setShowToolbar(false);
+      return;
+    }
+    if (range?.commonAncestorContainer && !containerRef?.current?.contains(range?.commonAncestorContainer)) {
+      setShowToolbar(false);
+      return;
+    }
+    changeToolBarPosition();
+  }, [range]);
 
-    document.addEventListener('selectionchange', selectionChangeCallback);
-
-    return () => {
-      document.removeEventListener('selectionchange', selectionChangeCallback);
-    };
-  }, []);
+  function deepCopy(info: TextSegmentInfo) {
+    return JSON.parse(JSON.stringify(info));
+  }
 
   const changeToolBarPosition = () => {
     const selection = window.getSelection();
 
-    if (selection?.type !== 'Range') {
+    if (selection?.type !== SELECTION_RANGE) {
       setShowToolbar(false);
       return;
     }
 
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
-    setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
+    const rect = range?.getBoundingClientRect();
+    if (rect) setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
     setShowToolbar(true);
   };
 
@@ -63,32 +59,33 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
     parentNode: Node;
     index: number;
   }
+
   const getTextSegments = (selection: Selection): TextSegmentInfo[] | null => {
-    if (containerRef?.current && selection?.type === 'Range') {
+    if (containerRef?.current && isSelectRange) {
       let startContainerParentNode = selection.getRangeAt(0).startContainer.parentElement;
       let endContainerParentNode = selection.getRangeAt(0).endContainer.parentElement;
 
       let firstIndex = 0;
       let lastIndex = 0;
 
-      if (startContainerParentNode?.id && startContainerParentNode?.id === 'weEditorContainer') {
+      if (startContainerParentNode?.id && startContainerParentNode?.id === WE_EDITOR_ID) {
         firstIndex = Array.prototype.indexOf.call(
           containerRef.current.childNodes,
           selection.getRangeAt(0).startContainer
         );
       } else {
-        while (startContainerParentNode?.parentElement?.id !== 'weEditorContainer') {
+        while (startContainerParentNode?.parentElement?.id !== WE_EDITOR_ID) {
           if (startContainerParentNode) startContainerParentNode = startContainerParentNode?.parentElement;
         }
 
         firstIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, startContainerParentNode);
       }
 
-      if (endContainerParentNode?.id && endContainerParentNode.id === 'weEditorContainer') {
+      if (endContainerParentNode?.id && endContainerParentNode.id === WE_EDITOR_ID) {
         lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, selection.getRangeAt(0).endContainer);
       } else {
-        while (endContainerParentNode?.parentElement?.id !== 'weEditorContainer') {
-          if (endContainerParentNode) endContainerParentNode = endContainerParentNode.parentElement;
+        while (endContainerParentNode?.parentElement?.id !== WE_EDITOR_ID) {
+          if (endContainerParentNode) endContainerParentNode = endContainerParentNode?.parentElement;
         }
 
         lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, endContainerParentNode);
@@ -106,8 +103,8 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
           parentNode: node,
           index: i,
         };
-        while (node.nodeType !== 3) {
-          if (node.nodeName === 'BR') {
+        while (node.nodeType !== TEXT_NODE_TYPE) {
+          if (node.nodeName === BR_NAME) {
             textSegmentInfo.br = true;
             break;
           }
@@ -124,24 +121,24 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
         if (node.nodeValue && i === firstIndex) {
           if (selection.getRangeAt(0).startContainer !== selection.getRangeAt(0).endContainer) {
             textSegmentInfo.text = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
-            textSegments.push(JSON.parse(JSON.stringify(textSegmentInfo)));
+            textSegments.push(deepCopy(textSegmentInfo));
             textSegmentInfo.text = node.nodeValue.substring(selection.getRangeAt(0).startOffset, node.nodeValue.length);
             textSegments.push(textSegmentInfo);
           } else {
             textSegmentInfo.text = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
-            textSegments.push(JSON.parse(JSON.stringify(textSegmentInfo)));
+            textSegments.push(deepCopy(textSegmentInfo));
             textSegmentInfo.text = node.nodeValue.substring(
               selection.getRangeAt(0).startOffset,
               selection.getRangeAt(0).endOffset
             );
-            textSegments.push(JSON.parse(JSON.stringify(textSegmentInfo)));
+            textSegments.push(deepCopy(textSegmentInfo));
             textSegmentInfo.text = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
             textSegments.push(textSegmentInfo);
           }
         } else if (node.nodeValue && i === lastIndex) {
           textSegmentInfo.text = node.nodeValue.substring(0, selection.getRangeAt(0).endOffset);
           textSegments.push(textSegmentInfo);
-          const textSegment = JSON.parse(JSON.stringify(textSegmentInfo));
+          const textSegment = deepCopy(textSegmentInfo);
 
           textSegment.text = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
           textSegments.push(textSegment);
@@ -160,8 +157,9 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
 
   const setBold = (): void => {
     const selection = window.getSelection();
-    if (selection && selection.type === 'Range') {
+    if (selection && isSelectRange) {
       const textSegments = getTextSegments(selection);
+
       if (!textSegments) {
         return;
       }
@@ -190,23 +188,22 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
           break;
         }
       }
-      const range = selection.getRangeAt(0);
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
         let newElement;
         let lastElement;
 
         if (textSegments[i].br) {
-          lastElement = newElement = document.createElement('br');
-          if (newElement) range.insertNode(newElement);
+          lastElement = newElement = document.createElement(BR_NAME);
+          if (newElement) range?.insertNode(newElement);
         } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
-          range.insertNode(document.createTextNode(textSegments[i].text));
+          range?.insertNode(document.createTextNode(textSegments[i].text));
         } else {
           if (textSegments[i].bold) {
             lastElement = newElement = document.createElement('b');
           }
           if (textSegments[i].underline) {
-            if (lastElement === undefined) {
+            if (!lastElement) {
               lastElement = newElement = document.createElement('u');
             } else {
               lastElement.appendChild(document.createElement('u'));
@@ -214,7 +211,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
             }
           }
           if (textSegments[i].italic) {
-            if (lastElement === undefined) {
+            if (!lastElement) {
               lastElement = newElement = document.createElement('i');
             } else {
               lastElement.appendChild(document.createElement('i'));
@@ -222,7 +219,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
             }
           }
           if (lastElement) lastElement.appendChild(document.createTextNode(textSegments[i].text));
-          if (newElement) range.insertNode(newElement);
+          if (newElement) range?.insertNode(newElement);
         }
       }
     }
@@ -233,7 +230,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
 
   const setUnderLine = () => {
     const selection = window.getSelection();
-    if (selection && selection.type === 'Range') {
+    if (selection && isSelectRange) {
       const textSegments = getTextSegments(selection);
       if (!textSegments) {
         return;
@@ -263,23 +260,22 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
           break;
         }
       }
-      const range = selection.getRangeAt(0);
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
         let newElement;
         let lastElement;
 
         if (textSegments[i].br) {
-          lastElement = newElement = document.createElement('br');
-          if (newElement) range.insertNode(newElement);
+          lastElement = newElement = document.createElement(BR_NAME);
+          if (newElement) range?.insertNode(newElement);
         } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
-          range.insertNode(document.createTextNode(textSegments[i].text));
+          range?.insertNode(document.createTextNode(textSegments[i].text));
         } else {
           if (textSegments[i].bold) {
             lastElement = newElement = document.createElement('b');
           }
           if (textSegments[i].underline) {
-            if (lastElement === undefined) {
+            if (!lastElement) {
               lastElement = newElement = document.createElement('u');
             } else {
               lastElement.appendChild(document.createElement('u'));
@@ -287,7 +283,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
             }
           }
           if (textSegments[i].italic) {
-            if (lastElement === undefined) {
+            if (!lastElement) {
               lastElement = newElement = document.createElement('i');
             } else {
               lastElement.appendChild(document.createElement('i'));
@@ -295,7 +291,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
             }
           }
           if (lastElement) lastElement.appendChild(document.createTextNode(textSegments[i].text));
-          if (newElement) range.insertNode(newElement);
+          if (newElement) range?.insertNode(newElement);
         }
       }
     }
@@ -303,7 +299,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
 
   const setItalic = () => {
     const selection = window.getSelection();
-    if (selection && selection.type === 'Range') {
+    if (selection && isSelectRange) {
       const textSegments = getTextSegments(selection);
       if (!textSegments) {
         return;
@@ -333,23 +329,22 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
           break;
         }
       }
-      const range = selection.getRangeAt(0);
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
         let newElement;
         let lastElement;
 
         if (textSegments[i].br) {
-          lastElement = newElement = document.createElement('br');
-          if (newElement) range.insertNode(newElement);
+          lastElement = newElement = document.createElement(BR_NAME);
+          if (newElement) range?.insertNode(newElement);
         } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
-          range.insertNode(document.createTextNode(textSegments[i].text));
+          range?.insertNode(document.createTextNode(textSegments[i].text));
         } else {
           if (textSegments[i].bold) {
             lastElement = newElement = document.createElement('b');
           }
           if (textSegments[i].underline) {
-            if (lastElement === undefined) {
+            if (!lastElement) {
               lastElement = newElement = document.createElement('u');
             } else {
               lastElement.appendChild(document.createElement('u'));
@@ -357,7 +352,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
             }
           }
           if (textSegments[i].italic) {
-            if (lastElement === undefined) {
+            if (!lastElement) {
               lastElement = newElement = document.createElement('i');
             } else {
               lastElement.appendChild(document.createElement('i'));
@@ -365,7 +360,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
             }
           }
           if (lastElement) lastElement.appendChild(document.createTextNode(textSegments[i].text));
-          if (newElement) range.insertNode(newElement);
+          if (newElement) range?.insertNode(newElement);
         }
       }
     }
