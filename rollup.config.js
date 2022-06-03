@@ -9,6 +9,10 @@ export default {
       file: packageJSON.main,
       format: 'cjs',
     },
+    {
+      file: packageJSON.module,
+      format: 'es',
+    },
   ],
   plugins: [
     typescript({ abortOnError: false, tsconfigOverride: { exclude: ['__tests__'] } }),
@@ -18,5 +22,5 @@ export default {
       summaryOnly: true,
     }),
   ],
-  external: ['react', '@emotion/styled', 'react-icons'],
+  external: [...Object.keys(packageJSON.dependencies || {})],
 };
