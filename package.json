@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "light-weight, tagless and simple text editor!",
   "main": "dist/index.js",
+  "module": "lib/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wecode-bootcamp/we-editor.git"

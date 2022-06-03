@@ -11,6 +11,6 @@ describe('component: WeEditor', () => {
     const ref = React.createRef<WeEditorRef>();
     render(<WeEditor ref={ref} />);
 
-    expect(ref.current?.getHTMLString()).toBe('');
+    expect(ref.current?.getHTMLState()).toBe('');
   });
 });

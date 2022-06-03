@@ -1,5 +1,5 @@
 import React from 'react';
-import { SELECTION_RANGE } from './const';
+import { SELECTION_RANGE } from '../common/const';
 
 function useSelection() {
   const [range, setRange] = React.useState<Range | null>(null);
