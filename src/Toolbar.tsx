@@ -33,8 +33,8 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
     changeToolBarPosition();
   }, [range]);
 
-  function deepCopy(info: TextSegmentInfo) {
-    return JSON.parse(JSON.stringify(info));
+  function deepCopyList(list: any[]) {
+    return Object.assign([], list);
   }
 
   const changeToolBarPosition = () => {
@@ -50,17 +50,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
     setShowToolbar(true);
   };
 
-  interface TextSegmentInfo {
-    br: boolean;
-    bold: boolean;
-    underline: boolean;
-    italic: boolean;
-    text: string;
-    parentNode: Node;
-    index: number;
-  }
-
-  const getTextSegments = (selection: Selection): TextSegmentInfo[] | null => {
+  const getTextSegments = (selection: Selection): string[][] | null => {
     if (containerRef?.current && isSelectRange) {
       let startContainerParentNode = selection.getRangeAt(0).startContainer.parentElement;
       let endContainerParentNode = selection.getRangeAt(0).endContainer.parentElement;
@@ -94,68 +84,57 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
       const textSegments = [];
       for (let i = firstIndex; i <= lastIndex; i += 1) {
         let node = containerRef.current.childNodes[i];
-        const textSegmentInfo: TextSegmentInfo = {
-          br: false,
-          bold: false,
-          underline: false,
-          italic: false,
-          text: '',
-          parentNode: node,
-          index: i,
-        };
+        const textSegmentInfo: string[] = [];
+
         while (node.nodeType !== TEXT_NODE_TYPE) {
-          if (node.nodeName === BR_NAME) {
-            textSegmentInfo.br = true;
-            break;
-          }
-          if (node.nodeName === 'B') {
-            textSegmentInfo.bold = true;
-          } else if (node.nodeName === 'U') {
-            textSegmentInfo.underline = true;
-          } else if (node.nodeName === 'I') {
-            textSegmentInfo.italic = true;
-          }
+          textSegmentInfo.push(node.nodeName);
           node = node.childNodes[0];
         }
 
-        if (node.nodeValue && i === firstIndex) {
-          if (selection.getRangeAt(0).startContainer !== selection.getRangeAt(0).endContainer) {
-            textSegmentInfo.text = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
-            textSegments.push(deepCopy(textSegmentInfo));
-            textSegmentInfo.text = node.nodeValue.substring(selection.getRangeAt(0).startOffset, node.nodeValue.length);
-            textSegments.push(textSegmentInfo);
+        if (node.nodeValue) {
+          if (i === firstIndex) {
+            if (firstIndex !== lastIndex) {
+              const first = deepCopyList(textSegmentInfo);
+              const second = deepCopyList(textSegmentInfo);
+              first.push(node.nodeValue.substring(0, selection.getRangeAt(0).startOffset));
+              textSegments.push(first);
+              second.push(node.nodeValue.substring(selection.getRangeAt(0).startOffset, node.nodeValue.length));
+              textSegments.push(second);
+            } else {
+              const first = deepCopyList(textSegmentInfo);
+              const second = deepCopyList(textSegmentInfo);
+              const third = deepCopyList(textSegmentInfo);
+              first.push(node.nodeValue.substring(0, selection.getRangeAt(0).startOffset));
+              textSegments.push(first);
+              second.push(
+                node.nodeValue.substring(selection.getRangeAt(0).startOffset, selection.getRangeAt(0).endOffset)
+              );
+              textSegments.push(second);
+              third.push(node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length));
+              textSegments.push(third);
+            }
+          } else if (i === lastIndex) {
+            const first = deepCopyList(textSegmentInfo);
+            const second = deepCopyList(textSegmentInfo);
+            first.push(node.nodeValue.substring(0, selection.getRangeAt(0).endOffset));
+            textSegments.push(first);
+            second.push(node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length));
+            textSegments.push(second);
           } else {
-            textSegmentInfo.text = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
-            textSegments.push(deepCopy(textSegmentInfo));
-            textSegmentInfo.text = node.nodeValue.substring(
-              selection.getRangeAt(0).startOffset,
-              selection.getRangeAt(0).endOffset
-            );
-            textSegments.push(deepCopy(textSegmentInfo));
-            textSegmentInfo.text = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
+            textSegmentInfo.push(node.nodeValue);
             textSegments.push(textSegmentInfo);
           }
-        } else if (node.nodeValue && i === lastIndex) {
-          textSegmentInfo.text = node.nodeValue.substring(0, selection.getRangeAt(0).endOffset);
-          textSegments.push(textSegmentInfo);
-          const textSegment = deepCopy(textSegmentInfo);
-
-          textSegment.text = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
-          textSegments.push(textSegment);
-        } else {
-          if (node.nodeValue) {
-            textSegmentInfo.text = node.nodeValue;
-          }
-          textSegments.push(textSegmentInfo);
         }
       }
-
+      const childNodes = containerRef.current.childNodes;
+      for (let q = firstIndex; q <= lastIndex; q += 1) {
+        childNodes[firstIndex].remove();
+      }
       return textSegments;
     }
     return null;
   };
-
-  const setBold = (): void => {
+  const setFontStyle = (tagName: string): void => {
     const selection = window.getSelection();
     if (selection && isSelectRange) {
       const textSegments = getTextSegments(selection);
@@ -165,7 +144,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
       }
       let allTextisbold = true;
       for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (!textSegments[i].br && !textSegments[i].bold) {
+        if (textSegments[i].indexOf(tagName.toUpperCase()) === -1) {
           allTextisbold = false;
           break;
         }
@@ -173,203 +152,28 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
 
       if (allTextisbold === true) {
         for (let i = 1; i < textSegments.length - 1; i += 1) {
-          textSegments[i].bold = false;
+          textSegments[i] = textSegments[i].filter((element) => element !== tagName.toUpperCase());
         }
       } else {
         for (let i = 1; i < textSegments.length - 1; i += 1) {
-          textSegments[i].bold = true;
-        }
-      }
-      for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (containerRef.current && textSegments.length !== 3) {
-          containerRef.current.removeChild(textSegments[i].parentNode);
-        } else if (containerRef.current) {
-          containerRef.current.removeChild(textSegments[2].parentNode);
-          break;
+          if (textSegments[i].indexOf(tagName.toUpperCase()) === -1) {
+            textSegments[i].splice(textSegments[i].length - 1, 0, tagName.toUpperCase());
+          }
         }
       }
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-        let newElement;
-        let lastElement;
-
-        if (textSegments[i].br) {
-          lastElement = newElement = document.createElement(BR_NAME);
-          if (newElement) range?.insertNode(newElement);
-        } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
-          range?.insertNode(document.createTextNode(textSegments[i].text));
-        } else {
-          if (textSegments[i].bold) {
-            lastElement = newElement = document.createElement('b');
+        if (textSegments[i].length > 0) {
+          let lastElement;
+          let newElement: any = document.createTextNode(textSegments[i][textSegments[i].length - 1]);
+          for (let j = textSegments[i].length - 2; j >= 0; j -= 1) {
+            lastElement = document.createElement(textSegments[i][j].toLowerCase());
+            lastElement.appendChild(newElement);
+            newElement = lastElement;
           }
-          if (textSegments[i].underline) {
-            if (!lastElement) {
-              lastElement = newElement = document.createElement('u');
-            } else {
-              lastElement.appendChild(document.createElement('u'));
-              lastElement = lastElement.childNodes[0];
-            }
-          }
-          if (textSegments[i].italic) {
-            if (!lastElement) {
-              lastElement = newElement = document.createElement('i');
-            } else {
-              lastElement.appendChild(document.createElement('i'));
-              lastElement = lastElement.childNodes[0];
-            }
-          }
-          if (lastElement) lastElement.appendChild(document.createTextNode(textSegments[i].text));
           if (newElement) range?.insertNode(newElement);
         }
       }
-    }
-
-    if (containerRef.current?.innerHTML) undoList.push(containerRef.current.innerHTML);
-    setUndoList(undoList);
-  };
-
-  const setUnderLine = () => {
-    const selection = window.getSelection();
-    if (selection && isSelectRange) {
-      const textSegments = getTextSegments(selection);
-      if (!textSegments) {
-        return;
-      }
-      let allTextisUnderLine = true;
-      for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (!textSegments[i].br && !textSegments[i].underline) {
-          allTextisUnderLine = false;
-          break;
-        }
-      }
-
-      if (allTextisUnderLine === true) {
-        for (let i = 1; i < textSegments.length - 1; i += 1) {
-          textSegments[i].underline = false;
-        }
-      } else {
-        for (let i = 1; i < textSegments.length - 1; i += 1) {
-          textSegments[i].underline = true;
-        }
-      }
-      for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (containerRef.current && textSegments.length !== 3) {
-          containerRef.current.removeChild(textSegments[i].parentNode);
-        } else if (containerRef.current) {
-          containerRef.current.removeChild(textSegments[2].parentNode);
-          break;
-        }
-      }
-
-      for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-        let newElement;
-        let lastElement;
-
-        if (textSegments[i].br) {
-          lastElement = newElement = document.createElement(BR_NAME);
-          if (newElement) range?.insertNode(newElement);
-        } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
-          range?.insertNode(document.createTextNode(textSegments[i].text));
-        } else {
-          if (textSegments[i].bold) {
-            lastElement = newElement = document.createElement('b');
-          }
-          if (textSegments[i].underline) {
-            if (!lastElement) {
-              lastElement = newElement = document.createElement('u');
-            } else {
-              lastElement.appendChild(document.createElement('u'));
-              lastElement = lastElement.childNodes[0];
-            }
-          }
-          if (textSegments[i].italic) {
-            if (!lastElement) {
-              lastElement = newElement = document.createElement('i');
-            } else {
-              lastElement.appendChild(document.createElement('i'));
-              lastElement = lastElement.childNodes[0];
-            }
-          }
-          if (lastElement) lastElement.appendChild(document.createTextNode(textSegments[i].text));
-          if (newElement) range?.insertNode(newElement);
-        }
-      }
-    }
-  };
-
-  const setItalic = () => {
-    const selection = window.getSelection();
-    if (selection && isSelectRange) {
-      const textSegments = getTextSegments(selection);
-      if (!textSegments) {
-        return;
-      }
-      let allTextisItalic = true;
-      for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (!textSegments[i].br && !textSegments[i].italic) {
-          allTextisItalic = false;
-          break;
-        }
-      }
-
-      if (allTextisItalic === true) {
-        for (let i = 1; i < textSegments.length - 1; i += 1) {
-          textSegments[i].italic = false;
-        }
-      } else {
-        for (let i = 1; i < textSegments.length - 1; i += 1) {
-          textSegments[i].italic = true;
-        }
-      }
-      for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (containerRef.current && textSegments.length !== 3) {
-          containerRef.current.removeChild(textSegments[i].parentNode);
-        } else if (containerRef.current) {
-          containerRef.current.removeChild(textSegments[2].parentNode);
-          break;
-        }
-      }
-
-      for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-        let newElement;
-        let lastElement;
-
-        if (textSegments[i].br) {
-          lastElement = newElement = document.createElement(BR_NAME);
-          if (newElement) range?.insertNode(newElement);
-        } else if (!textSegments[i].bold && !textSegments[i].underline && !textSegments[i].italic) {
-          range?.insertNode(document.createTextNode(textSegments[i].text));
-        } else {
-          if (textSegments[i].bold) {
-            lastElement = newElement = document.createElement('b');
-          }
-          if (textSegments[i].underline) {
-            if (!lastElement) {
-              lastElement = newElement = document.createElement('u');
-            } else {
-              lastElement.appendChild(document.createElement('u'));
-              lastElement = lastElement.childNodes[0];
-            }
-          }
-          if (textSegments[i].italic) {
-            if (!lastElement) {
-              lastElement = newElement = document.createElement('i');
-            } else {
-              lastElement.appendChild(document.createElement('i'));
-              lastElement = lastElement.childNodes[0];
-            }
-          }
-          if (lastElement) lastElement.appendChild(document.createTextNode(textSegments[i].text));
-          if (newElement) range?.insertNode(newElement);
-        }
-      }
-    }
-  };
-
-  const setLink = () => {
-    const url = prompt('URL을 입력하세요', '');
-    if (url?.length && url.length > 0) {
-      document.execCommand('createLink', false, url);
     }
   };
 
@@ -378,30 +182,26 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
       <ButtonWrapper>
         <ToolButton
           onClick={() => {
-            setBold();
+            setFontStyle('b');
           }}
         >
           <BiBold size="20" />
         </ToolButton>
         <ToolButton
           onClick={() => {
-            setUnderLine();
+            setFontStyle('u');
           }}
         >
           <BiUnderline size="20" />
         </ToolButton>
         <ToolButton
           onClick={() => {
-            setItalic();
+            setFontStyle('i');
           }}
         >
           <BiItalic size="20" />
         </ToolButton>
-        <ToolButton
-          onClick={() => {
-            setLink();
-          }}
-        >
+        <ToolButton onClick={() => {}}>
           <BiLink size="20" />
         </ToolButton>
       </ButtonWrapper>
