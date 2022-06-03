@@ -1,54 +1,20 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable no-multi-assign */
-/* eslint-disable prefer-destructuring */
 import * as React from 'react';
+import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
-import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
+
+import { WE_EDITOR_ID, TEXT_NODE_TYPE } from '../common/const';
 import { ToolbarPostion } from '../common/type';
-import { WE_EDITOR_ID, TEXT_NODE_TYPE, BR_NAME, SELECTION_RANGE } from '../common/const';
+import { deepCopyList } from '../common/util';
 import useSelection from '../hook/useSelection';
 
 interface ToolbarProps {
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
-  setUndoList: React.Dispatch<React.SetStateAction<string[]>>;
-  undoList: string[];
 }
 
-function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
-  const [toolbarPosition, setToolbarPosition] = React.useState<ToolbarPostion>([0, 0]);
-  const [showToolbar, setShowToolbar] = React.useState<boolean>(false);
-  const toolbarRef = React.useRef<HTMLDivElement | null>(null);
+function Toolbar({ containerRef }: ToolbarProps) {
   const { range, isSelectRange } = useSelection();
-
-  React.useEffect(() => {
-    if (!isSelectRange) {
-      setShowToolbar(false);
-      return;
-    }
-    if (range?.commonAncestorContainer && !containerRef?.current?.contains(range?.commonAncestorContainer)) {
-      setShowToolbar(false);
-      return;
-    }
-    changeToolBarPosition();
-  }, [range]);
-
-  function deepCopyList(list: any[]) {
-    return Object.assign([], list);
-  }
-
-  const changeToolBarPosition = () => {
-    const selection = window.getSelection();
-
-    if (selection?.type !== SELECTION_RANGE) {
-      setShowToolbar(false);
-      return;
-    }
-
-    const rect = range?.getBoundingClientRect();
-    if (rect) setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
-    setShowToolbar(true);
-  };
+  const { toolbarPosition, showToolbar } = useToolbar({ range, isSelectRange, containerRef });
 
   const getTextSegments = (selection: Selection): string[][] | null => {
     if (containerRef?.current && isSelectRange) {
@@ -88,7 +54,8 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
 
         while (node.nodeType !== TEXT_NODE_TYPE) {
           textSegmentInfo.push(node.nodeName);
-          node = node.childNodes[0];
+          const [childNode] = Array.from(node.childNodes);
+          node = childNode;
         }
 
         if (node.nodeValue) {
@@ -126,7 +93,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
           }
         }
       }
-      const childNodes = containerRef.current.childNodes;
+      const { childNodes } = containerRef.current;
       for (let q = firstIndex; q <= lastIndex; q += 1) {
         childNodes[firstIndex].remove();
       }
@@ -178,7 +145,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
   };
 
   return (
-    <ToolbarWrapper toolbarRef={toolbarRef} showToolbar={showToolbar} toolbarPosition={toolbarPosition}>
+    <ToolbarWrapper showToolbar={showToolbar} toolbarPosition={toolbarPosition}>
       <ButtonWrapper>
         <ToolButton
           onClick={() => {
@@ -209,12 +176,38 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
   );
 }
 
+interface UseToolbarProps {
+  range: Range | null;
+  isSelectRange: boolean;
+  containerRef: React.MutableRefObject<HTMLDivElement | null>;
+}
+
+function useToolbar({ range, isSelectRange, containerRef }: UseToolbarProps) {
+  const [showToolbar, setShowToolbar] = React.useState(false);
+  const [toolbarPosition, setToolbarPosition] = React.useState<ToolbarPostion>([0, 0]);
+
+  React.useEffect(() => {
+    if (!containerRef.current?.contains(range?.commonAncestorContainer ?? null)) {
+      setShowToolbar(false);
+      return;
+    }
+
+    setShowToolbar(isSelectRange);
+
+    const boundingClientRect = range?.getBoundingClientRect();
+    if (boundingClientRect) {
+      setToolbarPosition([boundingClientRect.left, window.scrollY + boundingClientRect.bottom]);
+    }
+  }, [containerRef, isSelectRange, range]);
+
+  return { toolbarPosition, showToolbar };
+}
+
 export default Toolbar;
 
 type ToolbarWrapperProps = {
   showToolbar: boolean;
   toolbarPosition: [number, number];
-  toolbarRef: React.MutableRefObject<HTMLDivElement | null>;
 };
 
 const ToolButton = styled.button`
