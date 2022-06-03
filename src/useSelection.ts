@@ -17,9 +17,9 @@ function useSelection() {
         setIsSelectRange(false);
       }
     };
-    document.addEventListener('select', selectionChangeCallback);
+    document.addEventListener('selectionchange', selectionChangeCallback);
     return () => {
-      document.removeEventListener('select', selectionChangeCallback);
+      document.removeEventListener('selectionchange', selectionChangeCallback);
     };
   }, []);
 
