@@ -14,7 +14,7 @@ const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
 
     const { onInput } = useOnInputCallback({ setHTMLState });
 
-    return <div {...divProps} contentEditable ref={containerRef} onInput={onInput} />;
+    return <div {...divProps} contentEditable id={WE_EDITOR_ID} ref={containerRef} onInput={onInput} />;
   }
 );
 
