@@ -6,13 +6,13 @@ import styled from '@emotion/styled';
 import { css } from '@emotion/react';
 import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
 import { ToolbarPostion } from '../common/type';
-import { WE_EDITOR_ID, TEXT_NODE_TYPE, BR_NAME, SELECTION_RANGE } from '../common/const';
+import { WE_EDITOR_ID, TEXT_NODE_TYPE } from '../common/const';
 import useSelection from '../hook/useSelection';
 
 interface ToolbarProps {
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
-  setUndoList: React.Dispatch<React.SetStateAction<string[]>>;
-  undoList: string[];
+  setUndoList?: React.Dispatch<React.SetStateAction<string[]>>;
+  undoList?: string[];
 }
 
 function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
@@ -31,6 +31,7 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
       return;
     }
     changeToolBarPosition();
+    setShowToolbar(true);
   }, [range]);
 
   function deepCopyList(list: any[]) {
@@ -38,16 +39,8 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
   }
 
   const changeToolBarPosition = () => {
-    const selection = window.getSelection();
-
-    if (selection?.type !== SELECTION_RANGE) {
-      setShowToolbar(false);
-      return;
-    }
-
     const rect = range?.getBoundingClientRect();
     if (rect) setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
-    setShowToolbar(true);
   };
 
   const getTextSegments = (selection: Selection): string[][] | null => {
