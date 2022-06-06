@@ -1,3 +1,4 @@
+/* eslint-disable array-callback-return */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-multi-assign */
 /* eslint-disable prefer-destructuring */
@@ -11,11 +12,9 @@ import useSelection from '../hook/useSelection';
 
 interface ToolbarProps {
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
-  setUndoList?: React.Dispatch<React.SetStateAction<string[]>>;
-  undoList?: string[];
 }
 
-function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
+function Toolbar({ containerRef }: ToolbarProps) {
   const [toolbarPosition, setToolbarPosition] = React.useState<ToolbarPostion>([0, 0]);
   const [showToolbar, setShowToolbar] = React.useState<boolean>(false);
   const toolbarRef = React.useRef<HTMLDivElement | null>(null);
@@ -34,8 +33,30 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
     setShowToolbar(true);
   }, [range]);
 
-  function deepCopyList(list: any[]) {
-    return Object.assign([], list);
+  function deepCopyTextSegmentInfo(textSegmentInfo: TextSegmentInfo): TextSegmentInfo {
+    const newTextSegmentInfo: TextSegmentInfo = {
+      tagInfos: [],
+      innertext: '',
+    };
+    if (textSegmentInfo.innertext) newTextSegmentInfo.innertext = textSegmentInfo.innertext;
+    for (let i = 0; i < textSegmentInfo.tagInfos.length; i += 1) {
+      const newTagInfo: TagInfo = {
+        name: '',
+        attributes: [],
+      };
+      newTagInfo.name = textSegmentInfo.tagInfos[i].name;
+      for (let j = 0; j < textSegmentInfo.tagInfos[i].attributes.length; j += 1) {
+        const newAttributeInfo = {
+          name: '',
+          value: '',
+        };
+        newAttributeInfo.name = textSegmentInfo.tagInfos[i].attributes[j].name;
+        newAttributeInfo.value = textSegmentInfo.tagInfos[i].attributes[j].value;
+        newTagInfo.attributes.push(newAttributeInfo);
+      }
+      newTextSegmentInfo.tagInfos.push(newTagInfo);
+    }
+    return newTextSegmentInfo;
   }
 
   const changeToolBarPosition = () => {
@@ -43,7 +64,22 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
     if (rect) setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
   };
 
-  const getTextSegments = (selection: Selection): string[][] | null => {
+  interface TextSegmentInfo {
+    tagInfos: TagInfo[];
+    innertext: string | null;
+  }
+
+  interface TagInfo {
+    name: string;
+    attributes: AttributeInfo[];
+  }
+
+  interface AttributeInfo {
+    name: string;
+    value: string;
+  }
+
+  const getTextSegments = (selection: Selection): TextSegmentInfo[] | null => {
     if (containerRef?.current && isSelectRange) {
       let startContainerParentNode = selection.getRangeAt(0).startContainer.parentElement;
       let endContainerParentNode = selection.getRangeAt(0).endContainer.parentElement;
@@ -77,44 +113,59 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
       const textSegments = [];
       for (let i = firstIndex; i <= lastIndex; i += 1) {
         let node = containerRef.current.childNodes[i];
-        const textSegmentInfo: string[] = [];
+        const textSegmentInfo: TextSegmentInfo = {
+          tagInfos: [],
+          innertext: null,
+        };
 
-        while (node.nodeType !== TEXT_NODE_TYPE) {
-          textSegmentInfo.push(node.nodeName);
+        while (node.nodeType !== Node.TEXT_NODE && node.nodeType === Node.ELEMENT_NODE) {
+          const tagInfo: TagInfo = { name: '', attributes: [] };
+          tagInfo.name = node.nodeName;
+          const element: Element = node as Element;
+          element.getAttributeNames().map((item) => {
+            const newAttributeInfo: AttributeInfo = {
+              name: item,
+              value: element.getAttribute(item) ?? '',
+            };
+            tagInfo.attributes.push(newAttributeInfo);
+          });
+
+          textSegmentInfo.tagInfos.push(tagInfo);
           node = node.childNodes[0];
         }
 
         if (node.nodeValue) {
           if (i === firstIndex) {
             if (firstIndex !== lastIndex) {
-              const first = deepCopyList(textSegmentInfo);
-              const second = deepCopyList(textSegmentInfo);
-              first.push(node.nodeValue.substring(0, selection.getRangeAt(0).startOffset));
+              const first = textSegmentInfo;
+              const second = deepCopyTextSegmentInfo(textSegmentInfo);
+              first.innertext = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
               textSegments.push(first);
-              second.push(node.nodeValue.substring(selection.getRangeAt(0).startOffset, node.nodeValue.length));
+              second.innertext = node.nodeValue.substring(selection.getRangeAt(0).startOffset, node.nodeValue.length);
               textSegments.push(second);
             } else {
-              const first = deepCopyList(textSegmentInfo);
-              const second = deepCopyList(textSegmentInfo);
-              const third = deepCopyList(textSegmentInfo);
-              first.push(node.nodeValue.substring(0, selection.getRangeAt(0).startOffset));
+              const first = textSegmentInfo;
+              const second = deepCopyTextSegmentInfo(textSegmentInfo);
+              const third = deepCopyTextSegmentInfo(textSegmentInfo);
+              first.innertext = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
               textSegments.push(first);
-              second.push(
-                node.nodeValue.substring(selection.getRangeAt(0).startOffset, selection.getRangeAt(0).endOffset)
+              second.innertext = node.nodeValue.substring(
+                selection.getRangeAt(0).startOffset,
+                selection.getRangeAt(0).endOffset
               );
               textSegments.push(second);
-              third.push(node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length));
+              third.innertext = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
               textSegments.push(third);
             }
           } else if (i === lastIndex) {
-            const first = deepCopyList(textSegmentInfo);
-            const second = deepCopyList(textSegmentInfo);
-            first.push(node.nodeValue.substring(0, selection.getRangeAt(0).endOffset));
+            const first = textSegmentInfo;
+            const second = deepCopyTextSegmentInfo(textSegmentInfo);
+            first.innertext = node.nodeValue.substring(0, selection.getRangeAt(0).endOffset);
             textSegments.push(first);
-            second.push(node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length));
+            second.innertext = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
             textSegments.push(second);
           } else {
-            textSegmentInfo.push(node.nodeValue);
+            textSegmentInfo.innertext = node.nodeValue;
             textSegments.push(textSegmentInfo);
           }
         }
@@ -127,40 +178,71 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
     }
     return null;
   };
-  const setFontStyle = (tagName: string): void => {
+  const setFontStyle = (tagName: string, attributes: AttributeInfo[] | null): void => {
     const selection = window.getSelection();
     if (selection && isSelectRange) {
       const textSegments = getTextSegments(selection);
-
       if (!textSegments) {
         return;
       }
-      let allTextisbold = true;
+      let allSegmentsHaveTag = true;
       for (let i = 1; i < textSegments.length - 1; i += 1) {
-        if (textSegments[i].indexOf(tagName.toUpperCase()) === -1) {
-          allTextisbold = false;
+        const tagNames: string[] = [];
+        textSegments[i].tagInfos.map((item) => {
+          tagNames.push(item.name);
+        });
+
+        if (tagNames.indexOf(tagName.toUpperCase()) === -1) {
+          allSegmentsHaveTag = false;
           break;
         }
       }
 
-      if (allTextisbold === true) {
+      if (allSegmentsHaveTag === true) {
         for (let i = 1; i < textSegments.length - 1; i += 1) {
-          textSegments[i] = textSegments[i].filter((element) => element !== tagName.toUpperCase());
+          textSegments[i].tagInfos = textSegments[i].tagInfos.filter(
+            (element) => element.name !== tagName.toUpperCase()
+          );
         }
       } else {
         for (let i = 1; i < textSegments.length - 1; i += 1) {
-          if (textSegments[i].indexOf(tagName.toUpperCase()) === -1) {
-            textSegments[i].splice(textSegments[i].length - 1, 0, tagName.toUpperCase());
+          const tagNames: string[] = [];
+          textSegments[i].tagInfos.map((item) => {
+            tagNames.push(item.name);
+          });
+
+          if (tagNames.indexOf(tagName.toUpperCase()) === -1) {
+            let newAttributes: AttributeInfo[] = [];
+            if (attributes) {
+              newAttributes = attributes;
+            } else {
+              newAttributes = [];
+            }
+            const tagInfo: TagInfo = {
+              name: tagName.toUpperCase(),
+              attributes: newAttributes,
+            };
+            textSegments[i].tagInfos.push(tagInfo);
           }
         }
       }
 
       for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-        if (textSegments[i].length > 0) {
+        if (textSegments[i].innertext) {
           let lastElement;
-          let newElement: any = document.createTextNode(textSegments[i][textSegments[i].length - 1]);
-          for (let j = textSegments[i].length - 2; j >= 0; j -= 1) {
-            lastElement = document.createElement(textSegments[i][j].toLowerCase());
+          let newElement;
+          newElement = document.createTextNode(textSegments[i].innertext ?? '');
+
+          for (let j = textSegments[i].tagInfos.length - 1; j >= 0; j -= 1) {
+            lastElement = document.createElement(textSegments[i].tagInfos[j].name.toLowerCase());
+
+            for (let h = 0; h < textSegments[i].tagInfos[j].attributes.length; h += 1) {
+              lastElement.setAttribute(
+                textSegments[i].tagInfos[j].attributes[h].name,
+                textSegments[i].tagInfos[j].attributes[h].value
+              );
+            }
+
             lastElement.appendChild(newElement);
             newElement = lastElement;
           }
@@ -175,26 +257,30 @@ function Toolbar({ containerRef, setUndoList, undoList }: ToolbarProps) {
       <ButtonWrapper>
         <ToolButton
           onClick={() => {
-            setFontStyle('b');
+            setFontStyle('b', null);
           }}
         >
           <BiBold size="20" />
         </ToolButton>
         <ToolButton
           onClick={() => {
-            setFontStyle('u');
+            setFontStyle('u', null);
           }}
         >
           <BiUnderline size="20" />
         </ToolButton>
         <ToolButton
           onClick={() => {
-            setFontStyle('i');
+            setFontStyle('i', null);
           }}
         >
           <BiItalic size="20" />
         </ToolButton>
-        <ToolButton onClick={() => {}}>
+        <ToolButton
+          onClick={() => {
+            setFontStyle('a', [{ name: 'href', value: 'ht' }]);
+          }}
+        >
           <BiLink size="20" />
         </ToolButton>
       </ButtonWrapper>
