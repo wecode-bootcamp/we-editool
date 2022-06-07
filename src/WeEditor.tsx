@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { WE_EDITOR_ID } from './common/const';
 import usePressKey from './hook/usePressKey';
+import Toolbar from './Toolbar/Toolbar';
 
 const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
   ({ htmlState, setHTMLState, ...divProps }, forwardedRef) => {
@@ -14,7 +15,12 @@ const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
 
     const { onInput } = useOnInputCallback({ setHTMLState });
 
-    return <div {...divProps} contentEditable ref={containerRef} onInput={onInput} />;
+    return (
+      <>
+        <div {...divProps} contentEditable id={WE_EDITOR_ID} ref={containerRef} onInput={onInput} />
+        <Toolbar containerRef={containerRef} />
+      </>
+    );
   }
 );
 
