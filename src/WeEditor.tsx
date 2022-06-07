@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { WE_EDITOR_ID } from './common/const';
+import usePressKey from './hook/usePressKey';
 
 const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
   ({ htmlState, setHTMLState, ...divProps }, forwardedRef) => {
@@ -7,6 +9,8 @@ const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
     React.useImperativeHandle(forwardedRef, () => ({
       getHTMLState: () => containerRef.current?.innerHTML,
     }));
+
+    usePressKey(containerRef);
 
     const { onInput } = useOnInputCallback({ setHTMLState });
 
