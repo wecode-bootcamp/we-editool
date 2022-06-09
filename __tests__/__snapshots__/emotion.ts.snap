@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`library: emotion css template test 1`] = `
+Object {
+  "map": undefined,
+  "name": "vyoujf",
+  "next": undefined,
+  "styles": "
+      display: flex;
+    ",
+  "toString": [Function],
+}
+`;
+
+exports[`library: emotion styled test 1`] = `
+Object {
+  "$$typeof": Symbol(react.forward_ref),
+  "__emotion_base": "div",
+  "__emotion_forwardProp": undefined,
+  "__emotion_real": [Circular],
+  "__emotion_styles": Array [
+    "
+      display: flex;
+    ",
+  ],
+  "defaultProps": undefined,
+  "render": [Function],
+  "withComponent": [Function],
+}
+`;
