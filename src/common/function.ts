@@ -72,9 +72,6 @@ const getTextSegments = (
       lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, endContainerParentNode);
     }
 
-    console.log('F', firstIndex);
-    console.log('L', lastIndex);
-
     const textSegments = [];
     for (let i = firstIndex; i <= lastIndex; i += 1) {
       let node = containerRef.current.childNodes[i];
@@ -93,10 +90,11 @@ const getTextSegments = (
             value: element.getAttribute(item) ?? '',
           };
           tagInfo.attributes.push(newAttributeInfo);
+          return null;
         });
         textSegmentInfo.tagInfos.push(tagInfo);
 
-        node = node.childNodes[0];
+        [node] = node.childNodes;
       }
 
       if (node.nodeValue) {
@@ -144,7 +142,7 @@ const getTextSegments = (
         textSegments.push(first);
       }
     }
-    const childNodes = containerRef.current.childNodes;
+    const { childNodes } = containerRef.current;
     for (let q = firstIndex; q <= lastIndex; q += 1) {
       childNodes[firstIndex].remove();
     }
@@ -171,6 +169,7 @@ const setTag = (
       const tagNames: string[] = [];
       textSegments[i].tagInfos.map((item) => {
         tagNames.push(item.name);
+        return null;
       });
 
       if (tagNames.indexOf(tagName.toUpperCase()) === -1 && tagNames.indexOf('BR') === -1) {
@@ -188,6 +187,7 @@ const setTag = (
         const tagNames: string[] = [];
         textSegments[i].tagInfos.map((item) => {
           tagNames.push(item.name);
+          return null;
         });
 
         if (tagNames.indexOf(tagName.toUpperCase()) === -1) {

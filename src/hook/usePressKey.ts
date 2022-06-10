@@ -4,14 +4,15 @@ import { TextSegmentInfo, TagInfo, AttributeInfo } from '../common/type';
 
 function usePressKey(containerRef: React.MutableRefObject<HTMLDivElement | null>) {
   React.useEffect(() => {
-    if (containerRef?.current) {
-      containerRef.current.onkeyup = () => {
+    const newContainerRef = containerRef;
+    if (newContainerRef?.current) {
+      newContainerRef.current.onkeyup = () => {
         const a = document.activeElement;
         if (a?.lastChild?.nodeName !== 'BR') {
           a?.appendChild(document.createElement('br'));
         }
       };
-      containerRef.current.onkeydown = (e) => {
+      newContainerRef.current.onkeydown = (e) => {
         if (e.key !== 'Enter') {
           return;
         }
@@ -22,6 +23,7 @@ function usePressKey(containerRef: React.MutableRefObject<HTMLDivElement | null>
           return;
         }
         e.preventDefault();
+
         if (
           range?.commonAncestorContainer.nodeType === Node.TEXT_NODE &&
           range?.commonAncestorContainer?.parentElement?.id === WE_EDITOR_ID
@@ -35,7 +37,9 @@ function usePressKey(containerRef: React.MutableRefObject<HTMLDivElement | null>
           selection?.removeAllRanges();
           if (range) selection?.addRange(range);
           return;
-        } else if (
+        }
+
+        if (
           range?.commonAncestorContainer.nodeType === Node.ELEMENT_NODE &&
           (range?.commonAncestorContainer as Element).id === WE_EDITOR_ID
         ) {
@@ -66,6 +70,7 @@ function usePressKey(containerRef: React.MutableRefObject<HTMLDivElement | null>
               value: element.getAttribute(item) ?? '',
             };
             tagInfo.attributes.push(newAttributeInfo);
+            return null;
           });
           if (node) node = node.parentNode;
         }
@@ -74,8 +79,8 @@ function usePressKey(containerRef: React.MutableRefObject<HTMLDivElement | null>
         let lastElement;
         let newElement;
 
-        if (textnode?.nodeValue)
-          newElement = document.createTextNode(textnode?.nodeValue?.substring(offset!, textnode?.nodeValue.length));
+        if (textnode?.nodeValue && offset)
+          newElement = document.createTextNode(textnode?.nodeValue?.substring(offset, textnode?.nodeValue.length));
 
         for (let j = textSegmentInfo.tagInfos.length - 1; j >= 0; j -= 1) {
           lastElement = document.createElement(textSegmentInfo.tagInfos[j].name.toLowerCase());
@@ -119,7 +124,7 @@ function usePressKey(containerRef: React.MutableRefObject<HTMLDivElement | null>
         if (range) selection?.addRange(range);
       };
     }
-  }, []);
+  }, [containerRef]);
 }
 
 export default usePressKey;

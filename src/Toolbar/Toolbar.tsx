@@ -2,37 +2,18 @@ import * as React from 'react';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
 import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
-import { ToolbarPostion } from '../common/type';
 import { setTag } from '../common/function';
 import useSelection from '../hook/useSelection';
+import useSetToolbar from './useSetToolbar';
 
 interface ToolbarProps {
   containerRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 function Toolbar({ containerRef }: ToolbarProps) {
-  const [toolbarPosition, setToolbarPosition] = React.useState<ToolbarPostion>([0, 0]);
-  const [showToolbar, setShowToolbar] = React.useState<boolean>(false);
   const toolbarRef = React.useRef<HTMLDivElement | null>(null);
   const { range, isSelectRange } = useSelection();
-
-  React.useEffect(() => {
-    if (!isSelectRange) {
-      setShowToolbar(false);
-      return;
-    }
-    if (range?.commonAncestorContainer && !containerRef?.current?.contains(range?.commonAncestorContainer)) {
-      setShowToolbar(false);
-      return;
-    }
-    changeToolBarPosition();
-    setShowToolbar(true);
-  }, [range]);
-
-  const changeToolBarPosition = () => {
-    const rect = range?.getBoundingClientRect();
-    if (rect) setToolbarPosition([rect.left, window.scrollY + rect.bottom]);
-  };
+  const { toolbarPosition, showToolbar } = useSetToolbar(containerRef);
 
   return (
     <ToolbarWrapper toolbarRef={toolbarRef} showToolbar={showToolbar} toolbarPosition={toolbarPosition}>
@@ -60,7 +41,7 @@ function Toolbar({ containerRef }: ToolbarProps) {
         </ToolButton>
         <ToolButton
           onClick={() => {
-            let url = prompt('URL을 입력하세요', '');
+            const url = prompt('URL을 입력하세요', '');
             if (url && url.length > 0) {
               setTag('a', [{ name: 'href', value: url }], containerRef, isSelectRange, range);
             }
