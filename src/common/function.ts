@@ -39,6 +39,11 @@ const getTextSegments = (
     let firstIndex = 0;
     let lastIndex = 0;
 
+    if ((selection.getRangeAt(0).startContainer as Element).id === WE_EDITOR_ID) {
+      startContainerParentNode = selection.getRangeAt(0).startContainer.childNodes[
+        selection.getRangeAt(0).startOffset
+      ] as HTMLElement;
+    }
     if (startContainerParentNode?.id && startContainerParentNode?.id === WE_EDITOR_ID) {
       firstIndex = Array.prototype.indexOf.call(
         containerRef.current.childNodes,
@@ -52,6 +57,11 @@ const getTextSegments = (
       firstIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, startContainerParentNode);
     }
 
+    if ((selection.getRangeAt(0).endContainer as Element).id === WE_EDITOR_ID) {
+      endContainerParentNode = selection.getRangeAt(0).endContainer.childNodes[
+        selection.getRangeAt(0).endOffset
+      ] as HTMLElement;
+    }
     if (endContainerParentNode?.id && endContainerParentNode.id === WE_EDITOR_ID) {
       lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, selection.getRangeAt(0).endContainer);
     } else {
@@ -61,6 +71,9 @@ const getTextSegments = (
 
       lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, endContainerParentNode);
     }
+
+    console.log('F', firstIndex);
+    console.log('L', lastIndex);
 
     const textSegments = [];
     for (let i = firstIndex; i <= lastIndex; i += 1) {
@@ -153,7 +166,6 @@ const setTag = (
     if (!textSegments) {
       return;
     }
-    console.log(textSegments);
     let allSegmentsHaveTag = true;
     for (let i = 1; i < textSegments.length - 1; i += 1) {
       const tagNames: string[] = [];
@@ -195,9 +207,9 @@ const setTag = (
     }
 
     for (let i = textSegments.length - 1; i >= 0; i -= 1) {
+      let lastElement;
+      let newElement;
       if (textSegments[i].innertext) {
-        let lastElement;
-        let newElement;
         newElement = document.createTextNode(textSegments[i].innertext ?? '');
 
         for (let j = textSegments[i].tagInfos.length - 1; j >= 0; j -= 1) {
@@ -215,11 +227,11 @@ const setTag = (
         }
         if (newElement) range?.insertNode(newElement);
       } else if (textSegments[i].tagInfos[0]?.name === 'BR') {
-        const br = document.createElement('br');
-        range?.insertNode(br);
-        if (range) selection?.addRange(range);
+        newElement = document.createElement('br');
+        range?.insertNode(newElement);
       }
     }
+    selection.removeAllRanges();
   }
 };
 

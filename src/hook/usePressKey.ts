@@ -112,6 +112,11 @@ function usePressKey(containerRef: React.MutableRefObject<HTMLDivElement | null>
           newElement = lastElement;
         }
         if (newElement) range?.insertNode(newElement);
+        range?.setStartAfter(br);
+        range?.setEndAfter(br);
+        range?.collapse(false);
+        selection?.removeAllRanges();
+        if (range) selection?.addRange(range);
       };
     }
   }, []);
