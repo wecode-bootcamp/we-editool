@@ -1,5 +1,5 @@
 import { TextSegmentInfo, TagInfo, AttributeInfo } from './type';
-import { WE_EDITOR_ID } from './const';
+import { SELECTION_RANGE, WE_EDITOR_ID } from './const';
 
 function deepCopyTextSegmentInfo(textSegmentInfo: TextSegmentInfo): TextSegmentInfo {
   const newTextSegmentInfo: TextSegmentInfo = {
@@ -27,143 +27,155 @@ function deepCopyTextSegmentInfo(textSegmentInfo: TextSegmentInfo): TextSegmentI
   return newTextSegmentInfo;
 }
 
+function getNodeIndex(childNodes: NodeListOf<ChildNode>, element: Element, offset: number) {
+  let nodeIndex = -1;
+  let newElement = element;
+  const childNodeArray = Array.from(childNodes);
+
+  // <br> tag process
+  if (newElement.id === WE_EDITOR_ID) {
+    newElement = newElement.childNodes[offset] as Element;
+    nodeIndex = childNodeArray.indexOf(newElement);
+  }
+
+  if (newElement.parentElement?.id === WE_EDITOR_ID) {
+    nodeIndex = childNodeArray.indexOf(newElement);
+  }
+
+  while (newElement.parentElement?.id !== WE_EDITOR_ID) {
+    if (newElement) newElement = newElement.parentElement as Element;
+    nodeIndex = childNodeArray.indexOf(newElement);
+  }
+
+  return nodeIndex;
+}
+
 const getTextSegments = (
-  selection: Selection,
-  containerRef: React.MutableRefObject<HTMLDivElement | null>,
-  isSelectRange: boolean
+  divRef: React.MutableRefObject<HTMLDivElement | null>,
+  range: Range
 ): TextSegmentInfo[] | null => {
-  if (containerRef?.current && isSelectRange) {
-    let startContainerParentNode = selection.getRangeAt(0).startContainer.parentElement;
-    let endContainerParentNode = selection.getRangeAt(0).endContainer.parentElement;
+  if (!divRef.current) {
+    throw new Error('div ref current is null');
+  }
 
-    let firstIndex = 0;
-    let lastIndex = 0;
+  const startElement = range.startContainer as Element;
+  const endElement = range.endContainer as Element;
 
-    if ((selection.getRangeAt(0).startContainer as Element).id === WE_EDITOR_ID) {
-      startContainerParentNode = selection.getRangeAt(0).startContainer.childNodes[
-        selection.getRangeAt(0).startOffset
-      ] as HTMLElement;
+  if (!startElement) {
+    throw new Error('startElement not found');
+  }
+
+  const startIndex = getNodeIndex(divRef.current.childNodes, startElement, range.startOffset);
+  const endIndex = getNodeIndex(divRef.current.childNodes, endElement, range.endOffset);
+  if (startIndex === -1 || endIndex === -1) throw new Error('startIndex or endIndex is -1');
+
+  const textSegments = [];
+
+  for (let i = startIndex; i <= endIndex; i += 1) {
+    let candidateSegment = divRef.current.childNodes[i];
+    const textSegmentInfo: TextSegmentInfo = {
+      tagInfos: [],
+      innertext: null,
+    };
+
+    while (
+      candidateSegment.nodeType !== Node.TEXT_NODE &&
+      candidateSegment.nodeType === Node.ELEMENT_NODE &&
+      candidateSegment.childNodes.length > 0
+    ) {
+      const tagInfo: TagInfo = { name: '', attributes: [] };
+      tagInfo.name = candidateSegment.nodeName;
+      const element: Element = candidateSegment as Element;
+      element.getAttributeNames().map((item) => {
+        const newAttributeInfo: AttributeInfo = {
+          name: item,
+          value: element.getAttribute(item) ?? '',
+        };
+        tagInfo.attributes.push(newAttributeInfo);
+        return null;
+      });
+      textSegmentInfo.tagInfos.push(tagInfo);
+
+      [candidateSegment] = candidateSegment.childNodes;
     }
-    if (startContainerParentNode?.id && startContainerParentNode?.id === WE_EDITOR_ID) {
-      firstIndex = Array.prototype.indexOf.call(
-        containerRef.current.childNodes,
-        selection.getRangeAt(0).startContainer
-      );
-    } else {
-      while (startContainerParentNode?.parentElement?.id !== WE_EDITOR_ID) {
-        if (startContainerParentNode) startContainerParentNode = startContainerParentNode?.parentElement;
-      }
 
-      firstIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, startContainerParentNode);
-    }
-
-    if ((selection.getRangeAt(0).endContainer as Element).id === WE_EDITOR_ID) {
-      endContainerParentNode = selection.getRangeAt(0).endContainer.childNodes[
-        selection.getRangeAt(0).endOffset
-      ] as HTMLElement;
-    }
-    if (endContainerParentNode?.id && endContainerParentNode.id === WE_EDITOR_ID) {
-      lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, selection.getRangeAt(0).endContainer);
-    } else {
-      while (endContainerParentNode?.parentElement?.id !== WE_EDITOR_ID) {
-        if (endContainerParentNode) endContainerParentNode = endContainerParentNode?.parentElement;
-      }
-
-      lastIndex = Array.prototype.indexOf.call(containerRef.current.childNodes, endContainerParentNode);
-    }
-
-    const textSegments = [];
-    for (let i = firstIndex; i <= lastIndex; i += 1) {
-      let node = containerRef.current.childNodes[i];
-      const textSegmentInfo: TextSegmentInfo = {
-        tagInfos: [],
-        innertext: null,
-      };
-
-      while (node.nodeType !== Node.TEXT_NODE && node.nodeType === Node.ELEMENT_NODE && node.childNodes.length > 0) {
-        const tagInfo: TagInfo = { name: '', attributes: [] };
-        tagInfo.name = node.nodeName;
-        const element: Element = node as Element;
-        element.getAttributeNames().map((item) => {
-          const newAttributeInfo: AttributeInfo = {
-            name: item,
-            value: element.getAttribute(item) ?? '',
-          };
-          tagInfo.attributes.push(newAttributeInfo);
-          return null;
-        });
-        textSegmentInfo.tagInfos.push(tagInfo);
-
-        [node] = node.childNodes;
-      }
-
-      if (node.nodeValue) {
-        if (i === firstIndex) {
-          if (firstIndex !== lastIndex) {
-            const first = textSegmentInfo;
-            const second = deepCopyTextSegmentInfo(textSegmentInfo);
-            first.innertext = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
-            textSegments.push(first);
-            second.innertext = node.nodeValue.substring(selection.getRangeAt(0).startOffset, node.nodeValue.length);
-            textSegments.push(second);
-          } else {
-            const first = textSegmentInfo;
-            const second = deepCopyTextSegmentInfo(textSegmentInfo);
-            const third = deepCopyTextSegmentInfo(textSegmentInfo);
-            first.innertext = node.nodeValue.substring(0, selection.getRangeAt(0).startOffset);
-            textSegments.push(first);
-            second.innertext = node.nodeValue.substring(
-              selection.getRangeAt(0).startOffset,
-              selection.getRangeAt(0).endOffset
-            );
-            textSegments.push(second);
-            third.innertext = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
-            textSegments.push(third);
-          }
-        } else if (i === lastIndex) {
+    if (candidateSegment.nodeValue) {
+      if (i === startIndex) {
+        if (startIndex !== endIndex) {
           const first = textSegmentInfo;
           const second = deepCopyTextSegmentInfo(textSegmentInfo);
-          first.innertext = node.nodeValue.substring(0, selection.getRangeAt(0).endOffset);
+          first.innertext = candidateSegment.nodeValue.substring(0, range.startOffset);
           textSegments.push(first);
-          second.innertext = node.nodeValue.substring(selection.getRangeAt(0).endOffset, node.nodeValue.length);
+          second.innertext = candidateSegment.nodeValue.substring(range.startOffset, candidateSegment.nodeValue.length);
           textSegments.push(second);
         } else {
-          textSegmentInfo.innertext = node.nodeValue;
-          textSegments.push(textSegmentInfo);
+          const first = textSegmentInfo;
+          const second = deepCopyTextSegmentInfo(textSegmentInfo);
+          const third = deepCopyTextSegmentInfo(textSegmentInfo);
+          first.innertext = candidateSegment.nodeValue.substring(0, range.startOffset);
+          textSegments.push(first);
+          second.innertext = candidateSegment.nodeValue.substring(range.startOffset, range.endOffset);
+          textSegments.push(second);
+          third.innertext = candidateSegment.nodeValue.substring(range.endOffset, candidateSegment.nodeValue.length);
+          textSegments.push(third);
         }
-      } else if (node.nodeName === 'BR') {
+      } else if (i === endIndex) {
         const first = textSegmentInfo;
-        const tagInfo: TagInfo = {
-          name: '',
-          attributes: [],
-        };
-        tagInfo.name = 'BR';
-        first.tagInfos.push(tagInfo);
+        const second = deepCopyTextSegmentInfo(textSegmentInfo);
+        first.innertext = candidateSegment.nodeValue.substring(0, range.endOffset);
         textSegments.push(first);
+        second.innertext = candidateSegment.nodeValue.substring(range.endOffset, candidateSegment.nodeValue.length);
+        textSegments.push(second);
+      } else {
+        textSegmentInfo.innertext = candidateSegment.nodeValue;
+        textSegments.push(textSegmentInfo);
       }
+    } else if (candidateSegment.nodeName === 'BR') {
+      const first = textSegmentInfo;
+      const tagInfo: TagInfo = {
+        name: '',
+        attributes: [],
+      };
+      tagInfo.name = 'BR';
+      first.tagInfos.push(tagInfo);
+      textSegments.push(first);
     }
-    const { childNodes } = containerRef.current;
-    for (let q = firstIndex; q <= lastIndex; q += 1) {
-      childNodes[firstIndex].remove();
-    }
-    return textSegments;
   }
-  return null;
+  const { childNodes } = divRef.current;
+  for (let q = startIndex; q <= endIndex; q += 1) {
+    childNodes[startIndex].remove();
+  }
+  return textSegments;
 };
 
-const setTag = (
-  tagName: string,
-  attributes: AttributeInfo[] | null,
-  containerRef: React.MutableRefObject<HTMLDivElement | null>,
-  isSelectRange: boolean,
-  range: Range | null
+export function getSelectionInfo() {
+  const selection = window.getSelection();
+
+  return selection && selection.type === SELECTION_RANGE
+    ? { range: selection.getRangeAt(0), isSelectRange: true }
+    : { range: null, isSelectRange: false };
+}
+
+const changeSelectionTag = (
+  divRef: React.MutableRefObject<HTMLDivElement | null>,
+  changeTagName: keyof HTMLElementTagNameMap,
+  attributes?: AttributeInfo[]
 ): void => {
   const selection = window.getSelection();
-  if (selection && isSelectRange) {
-    const textSegments = getTextSegments(selection, containerRef, isSelectRange);
+
+  const { range } = getSelectionInfo();
+
+  if (!divRef) {
+    throw new Error('divRef not found');
+  }
+
+  if (selection && range) {
+    const textSegments = getTextSegments(divRef, range);
+
     if (!textSegments) {
       return;
     }
+
     let allSegmentsHaveTag = true;
     for (let i = 1; i < textSegments.length - 1; i += 1) {
       const tagNames: string[] = [];
@@ -172,7 +184,7 @@ const setTag = (
         return null;
       });
 
-      if (tagNames.indexOf(tagName.toUpperCase()) === -1 && tagNames.indexOf('BR') === -1) {
+      if (tagNames.indexOf(changeTagName.toUpperCase()) === -1 && tagNames.indexOf('BR') === -1) {
         allSegmentsHaveTag = false;
         break;
       }
@@ -180,7 +192,9 @@ const setTag = (
 
     if (allSegmentsHaveTag === true) {
       for (let i = 1; i < textSegments.length - 1; i += 1) {
-        textSegments[i].tagInfos = textSegments[i].tagInfos.filter((element) => element.name !== tagName.toUpperCase());
+        textSegments[i].tagInfos = textSegments[i].tagInfos.filter(
+          (element) => element.name !== changeTagName.toUpperCase()
+        );
       }
     } else {
       for (let i = 1; i < textSegments.length - 1; i += 1) {
@@ -190,16 +204,10 @@ const setTag = (
           return null;
         });
 
-        if (tagNames.indexOf(tagName.toUpperCase()) === -1) {
-          let newAttributes: AttributeInfo[] = [];
-          if (attributes) {
-            newAttributes = attributes;
-          } else {
-            newAttributes = [];
-          }
+        if (tagNames.indexOf(changeTagName.toUpperCase()) === -1) {
           const tagInfo: TagInfo = {
-            name: tagName.toUpperCase(),
-            attributes: newAttributes,
+            name: changeTagName.toUpperCase(),
+            attributes: attributes ?? [],
           };
           textSegments[i].tagInfos.push(tagInfo);
         }
@@ -238,14 +246,14 @@ const setTag = (
 const insertTag = (
   tagName: string,
   attributes: AttributeInfo[] | null,
-  containerRef: React.MutableRefObject<HTMLDivElement | null>,
+  divRef: React.MutableRefObject<HTMLDivElement | null>,
   range: Range | null
 ): void => {
-  const newContainerRef = containerRef;
+  const newContainerRef = divRef;
   if (newContainerRef?.current) {
     const selection = window.getSelection();
     const offset = selection?.getRangeAt(0).startOffset;
-    if (range?.commonAncestorContainer && !containerRef?.current?.contains(range?.commonAncestorContainer)) {
+    if (range?.commonAncestorContainer && !divRef?.current?.contains(range?.commonAncestorContainer)) {
       return;
     }
 
@@ -347,4 +355,4 @@ const insertTag = (
   }
 };
 
-export { deepCopyTextSegmentInfo, getTextSegments, setTag, insertTag };
+export { deepCopyTextSegmentInfo, getTextSegments, changeSelectionTag, insertTag };

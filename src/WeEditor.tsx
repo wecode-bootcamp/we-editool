@@ -5,20 +5,20 @@ import Toolbar from './Toolbar/Toolbar';
 
 const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
   ({ htmlState, setHTMLState, ...divProps }, forwardedRef) => {
-    const containerRef = React.useRef<HTMLDivElement | null>(null);
+    const divRef = React.useRef<HTMLDivElement | null>(null);
 
     React.useImperativeHandle(forwardedRef, () => ({
-      getHTMLState: () => containerRef.current?.innerHTML,
+      getHTMLState: () => divRef.current?.innerHTML,
     }));
 
-    usePressKey(containerRef);
+    usePressKey(divRef);
 
     const { onInput } = useOnInputCallback({ setHTMLState });
 
     return (
       <>
-        <div {...divProps} contentEditable id={WE_EDITOR_ID} ref={containerRef} onInput={onInput} />
-        <Toolbar containerRef={containerRef} />
+        <div {...divProps} contentEditable id={WE_EDITOR_ID} ref={divRef} onInput={onInput} />
+        <Toolbar divRef={divRef} />
       </>
     );
   }

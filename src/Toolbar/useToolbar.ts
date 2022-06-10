@@ -2,7 +2,7 @@ import React from 'react';
 import useSelection from '../hook/useSelection';
 import { ToolbarPostion } from '../common/type';
 
-function useSetToolbar(containerRef: React.MutableRefObject<HTMLDivElement | null>) {
+function useToolbar(containerRef: React.MutableRefObject<HTMLDivElement | null>) {
   const [toolbarPosition, setToolbarPosition] = React.useState<ToolbarPostion>([0, 0]);
   const [showToolbar, setShowToolbar] = React.useState<boolean>(false);
   const { range, isSelectRange } = useSelection();
@@ -17,10 +17,12 @@ function useSetToolbar(containerRef: React.MutableRefObject<HTMLDivElement | nul
       setShowToolbar(false);
       return;
     }
+
     if (range?.commonAncestorContainer && !containerRef?.current?.contains(range?.commonAncestorContainer)) {
       setShowToolbar(false);
       return;
     }
+
     changeToolBarPosition();
     setShowToolbar(true);
   }, [range, isSelectRange, containerRef]);
@@ -28,4 +30,4 @@ function useSetToolbar(containerRef: React.MutableRefObject<HTMLDivElement | nul
   return { toolbarPosition, showToolbar };
 }
 
-export default useSetToolbar;
+export default useToolbar;

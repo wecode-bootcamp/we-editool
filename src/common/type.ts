@@ -14,4 +14,5 @@ interface AttributeInfo {
   name: string;
   value: string;
 }
+
 export { ToolbarPostion, TextSegmentInfo, TagInfo, AttributeInfo };

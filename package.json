@@ -18,6 +18,7 @@
     "clean": "rm -rf dist lib",
     "prebuild": "npm run clean",
     "build": "rollup -c",
+    "dev": "rollup -c -w",
     "test": "jest -i",
     "test:cov": "jest -i --coverage",
     "lint": "eslint './src/**/*.{ts,tsx}'",

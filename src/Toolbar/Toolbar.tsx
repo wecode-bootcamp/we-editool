@@ -2,39 +2,38 @@ import * as React from 'react';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
 import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
-import { setTag } from '../common/function';
+import { changeSelectionTag } from '../common/function';
 import useSelection from '../hook/useSelection';
-import useSetToolbar from './useSetToolbar';
+import useToolbar from './useToolbar';
 
 interface ToolbarProps {
-  containerRef: React.MutableRefObject<HTMLDivElement | null>;
+  divRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
-function Toolbar({ containerRef }: ToolbarProps) {
+function Toolbar({ divRef }: ToolbarProps) {
   const toolbarRef = React.useRef<HTMLDivElement | null>(null);
-  const { range, isSelectRange } = useSelection();
-  const { toolbarPosition, showToolbar } = useSetToolbar(containerRef);
+  const { toolbarPosition, showToolbar } = useToolbar(divRef);
 
   return (
     <ToolbarWrapper toolbarRef={toolbarRef} showToolbar={showToolbar} toolbarPosition={toolbarPosition}>
       <ButtonWrapper>
         <ToolButton
           onClick={() => {
-            setTag('b', null, containerRef, isSelectRange, range);
+            changeSelectionTag(divRef, 'b');
           }}
         >
           <BiBold size="20" />
         </ToolButton>
         <ToolButton
           onClick={() => {
-            setTag('u', null, containerRef, isSelectRange, range);
+            changeSelectionTag(divRef, 'u');
           }}
         >
           <BiUnderline size="20" />
         </ToolButton>
         <ToolButton
           onClick={() => {
-            setTag('i', null, containerRef, isSelectRange, range);
+            changeSelectionTag(divRef, 'i');
           }}
         >
           <BiItalic size="20" />
@@ -42,9 +41,8 @@ function Toolbar({ containerRef }: ToolbarProps) {
         <ToolButton
           onClick={() => {
             const url = prompt('URL을 입력하세요', '');
-            if (url && url.length > 0) {
-              setTag('a', [{ name: 'href', value: url }], containerRef, isSelectRange, range);
-            }
+            if (!url) return;
+            changeSelectionTag(divRef, 'a', [{ name: 'href', value: url }]);
           }}
         >
           <BiLink size="20" />

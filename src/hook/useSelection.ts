@@ -1,5 +1,6 @@
 import React from 'react';
 import { SELECTION_RANGE } from '../common/const';
+import { getSelectionInfo } from '../common/function';
 
 function useSelection() {
   const [range, setRange] = React.useState<Range | null>(null);
@@ -10,8 +11,10 @@ function useSelection() {
       const selection = window.getSelection();
 
       if (selection?.type === SELECTION_RANGE) {
-        setRange(selection.getRangeAt(0));
-        setIsSelectRange(true);
+        const { range: newRange, isSelectRange: newIsSelectRange } = getSelectionInfo();
+
+        setRange(newRange);
+        setIsSelectRange(newIsSelectRange);
       } else {
         setRange(null);
         setIsSelectRange(false);
