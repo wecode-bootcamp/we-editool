@@ -1,5 +1,10 @@
 name: on-pr-test
-on: pull_request
+on:
+  pull_request:
+    types:
+      - opened
+    paths:
+      - 'src/**'
 jobs:
   on-pr-test:
     runs-on: ubuntu-latest
