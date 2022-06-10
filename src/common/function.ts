@@ -235,4 +235,116 @@ const setTag = (
   }
 };
 
-export { deepCopyTextSegmentInfo, getTextSegments, setTag };
+const insertTag = (
+  tagName: string,
+  attributes: AttributeInfo[] | null,
+  containerRef: React.MutableRefObject<HTMLDivElement | null>,
+  range: Range | null
+): void => {
+  const newContainerRef = containerRef;
+  if (newContainerRef?.current) {
+    const selection = window.getSelection();
+    const offset = selection?.getRangeAt(0).startOffset;
+    if (range?.commonAncestorContainer && !containerRef?.current?.contains(range?.commonAncestorContainer)) {
+      return;
+    }
+
+    if (
+      (range?.commonAncestorContainer.nodeType === Node.TEXT_NODE &&
+        range?.commonAncestorContainer?.parentElement?.id === WE_EDITOR_ID) ||
+      (range?.commonAncestorContainer.nodeType === Node.ELEMENT_NODE &&
+        (range?.commonAncestorContainer as Element).id === WE_EDITOR_ID)
+    ) {
+      const tag = document.createElement(tagName);
+      if (attributes && attributes.length > 0) {
+        for (let h = 0; h < attributes.length; h += 1) {
+          tag.setAttribute(attributes[h].name, attributes[h].value);
+        }
+      }
+      range?.deleteContents();
+      range?.insertNode(tag);
+      range?.setStartAfter(tag);
+      range?.setEndAfter(tag);
+      range?.collapse(false);
+      selection?.removeAllRanges();
+      if (range) selection?.addRange(range);
+      return;
+    }
+
+    const textSegmentInfo: TextSegmentInfo = { tagInfos: [], innertext: '' };
+    const textnode = range?.commonAncestorContainer;
+    let node = range?.commonAncestorContainer.parentNode;
+    let node2;
+    while ((node as Element).id !== WE_EDITOR_ID) {
+      const tagInfo: TagInfo = { name: '', attributes: [] };
+      tagInfo.name = node?.nodeName ?? '';
+      textSegmentInfo.tagInfos.push(tagInfo);
+      node2 = node;
+      const element: Element = node as Element;
+      element.getAttributeNames().map((item) => {
+        const newAttributeInfo: AttributeInfo = {
+          name: item,
+          value: element.getAttribute(item) ?? '',
+        };
+        tagInfo.attributes.push(newAttributeInfo);
+        return null;
+      });
+      if (node) node = node.parentNode;
+    }
+    (node2 as Element).remove();
+
+    let lastElement;
+    let newElement;
+
+    if (textnode?.nodeValue && offset !== undefined)
+      newElement = document.createTextNode(textnode?.nodeValue?.substring(offset, textnode?.nodeValue.length));
+    if (newElement?.nodeValue?.length) {
+      for (let j = textSegmentInfo.tagInfos.length - 1; j >= 0; j -= 1) {
+        lastElement = document.createElement(textSegmentInfo.tagInfos[j].name.toLowerCase());
+
+        for (let h = 0; h < textSegmentInfo.tagInfos[j].attributes.length; h += 1) {
+          lastElement.setAttribute(
+            textSegmentInfo.tagInfos[j].attributes[h].name,
+            textSegmentInfo.tagInfos[j].attributes[h].value
+          );
+        }
+
+        lastElement.appendChild(newElement as Element);
+        newElement = lastElement;
+      }
+      if (newElement) range?.insertNode(newElement);
+    }
+    const tag = document.createElement(tagName);
+    if (attributes && attributes.length > 0) {
+      for (let h = 0; h < attributes.length; h += 1) {
+        tag.setAttribute(attributes[h].name, attributes[h].value);
+      }
+    }
+    range?.insertNode(tag);
+
+    if (textnode?.nodeValue) newElement = document.createTextNode(textnode?.nodeValue?.substring(0, offset));
+    if (newElement?.nodeValue?.length) {
+      for (let j = textSegmentInfo.tagInfos.length - 1; j >= 0; j -= 1) {
+        lastElement = document.createElement(textSegmentInfo.tagInfos[j].name.toLowerCase());
+
+        for (let h = 0; h < textSegmentInfo.tagInfos[j].attributes.length; h += 1) {
+          lastElement.setAttribute(
+            textSegmentInfo.tagInfos[j].attributes[h].name,
+            textSegmentInfo.tagInfos[j].attributes[h].value
+          );
+        }
+
+        lastElement.appendChild(newElement as Element);
+        newElement = lastElement;
+      }
+      if (newElement) range?.insertNode(newElement);
+    }
+    range?.setStartAfter(tag);
+    range?.setEndAfter(tag);
+    range?.collapse(false);
+    selection?.removeAllRanges();
+    if (range) selection?.addRange(range);
+  }
+};
+
+export { deepCopyTextSegmentInfo, getTextSegments, setTag, insertTag };
