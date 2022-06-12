@@ -50,12 +50,9 @@ function getNodeIndex(childNodes: NodeListOf<ChildNode>, element: Element, offse
   return nodeIndex;
 }
 
-const getTextSegments = (
-  divRef: React.MutableRefObject<HTMLDivElement | null>,
-  range: Range
-): TextSegmentInfo[] | null => {
+const getStartEndIndexOfRange = (divRef: React.MutableRefObject<HTMLDivElement | null>, range: Range): number[] => {
   if (!divRef.current) {
-    throw new Error('div ref current is null');
+    throw new Error('divRef.current not found');
   }
 
   const startElement = range.startContainer as Element;
@@ -67,8 +64,34 @@ const getTextSegments = (
 
   const startIndex = getNodeIndex(divRef.current.childNodes, startElement, range.startOffset);
   const endIndex = getNodeIndex(divRef.current.childNodes, endElement, range.endOffset);
-  if (startIndex === -1 || endIndex === -1) throw new Error('startIndex or endIndex is -1');
+  return [startIndex, endIndex];
+};
 
+const removeChildNodes = (
+  divRef: React.MutableRefObject<HTMLDivElement | null>,
+  startIndex: number,
+  endIndex: number
+) => {
+  if (!divRef.current) {
+    throw new Error('divRef.current not found');
+  }
+  const { childNodes } = divRef.current;
+  for (let q = startIndex; q <= endIndex; q += 1) {
+    childNodes[startIndex].remove();
+  }
+};
+
+const getTextSegments = (
+  divRef: React.MutableRefObject<HTMLDivElement | null>,
+  range: Range,
+  startIndex: number,
+  endIndex: number
+): TextSegmentInfo[] | null => {
+  if (!divRef.current) {
+    throw new Error('div ref current is null');
+  }
+
+  if (startIndex === -1 || endIndex === -1) throw new Error('startIndex or endIndex is -1');
   const textSegments = [];
 
   for (let i = startIndex; i <= endIndex; i += 1) {
@@ -141,10 +164,7 @@ const getTextSegments = (
       textSegments.push(first);
     }
   }
-  const { childNodes } = divRef.current;
-  for (let q = startIndex; q <= endIndex; q += 1) {
-    childNodes[startIndex].remove();
-  }
+
   return textSegments;
 };
 
@@ -156,13 +176,54 @@ export function getSelectionInfo() {
     : { range: null, isSelectRange: false };
 }
 
+const checkEverySegmentsHaveThisTag = (
+  tagName: keyof HTMLElementTagNameMap,
+  textSegments: TextSegmentInfo[],
+  divRef?: React.MutableRefObject<HTMLDivElement | null>
+): boolean => {
+  let allSegmentsHaveTag = true;
+  let newTextSegments: TextSegmentInfo[] | null | undefined;
+
+  if (textSegments?.length === 0) {
+    if (!divRef) {
+      throw new Error('div ref not found');
+    }
+    const selection = window.getSelection();
+    const range: Range | undefined = selection?.getRangeAt(0);
+    if (!range) {
+      throw new Error('range not found');
+    }
+    const [startIndex, endIndex] = getStartEndIndexOfRange(divRef, range);
+    newTextSegments = getTextSegments(divRef, range, startIndex, endIndex);
+  } else {
+    newTextSegments = textSegments;
+  }
+
+  if (!newTextSegments) {
+    newTextSegments = [];
+  }
+
+  for (let i = 1; i < newTextSegments.length - 1; i += 1) {
+    const tagNames: string[] = [];
+    newTextSegments[i].tagInfos.map((item) => {
+      tagNames.push(item.name);
+      return false;
+    });
+
+    if (tagNames.indexOf(tagName.toUpperCase()) === -1 && tagNames.indexOf('BR') === -1) {
+      allSegmentsHaveTag = false;
+      break;
+    }
+  }
+  return allSegmentsHaveTag;
+};
+
 const changeSelectionTag = (
   divRef: React.MutableRefObject<HTMLDivElement | null>,
   changeTagName: keyof HTMLElementTagNameMap,
   attributes?: AttributeInfo[]
 ): void => {
   const selection = window.getSelection();
-
   const { range } = getSelectionInfo();
 
   if (!divRef) {
@@ -170,25 +231,16 @@ const changeSelectionTag = (
   }
 
   if (selection && range) {
-    const textSegments = getTextSegments(divRef, range);
+    const [startIndex, endIndex] = getStartEndIndexOfRange(divRef, range);
+    const textSegments = getTextSegments(divRef, range, startIndex, endIndex);
 
     if (!textSegments) {
       return;
     }
 
-    let allSegmentsHaveTag = true;
-    for (let i = 1; i < textSegments.length - 1; i += 1) {
-      const tagNames: string[] = [];
-      textSegments[i].tagInfos.map((item) => {
-        tagNames.push(item.name);
-        return null;
-      });
+    removeChildNodes(divRef, startIndex, endIndex);
 
-      if (tagNames.indexOf(changeTagName.toUpperCase()) === -1 && tagNames.indexOf('BR') === -1) {
-        allSegmentsHaveTag = false;
-        break;
-      }
-    }
+    const allSegmentsHaveTag = checkEverySegmentsHaveThisTag(changeTagName, textSegments);
 
     if (allSegmentsHaveTag === true) {
       for (let i = 1; i < textSegments.length - 1; i += 1) {
@@ -215,24 +267,9 @@ const changeSelectionTag = (
     }
 
     for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-      let lastElement;
       let newElement;
       if (textSegments[i].innertext) {
-        newElement = document.createTextNode(textSegments[i].innertext ?? '');
-
-        for (let j = textSegments[i].tagInfos.length - 1; j >= 0; j -= 1) {
-          lastElement = document.createElement(textSegments[i].tagInfos[j].name.toLowerCase());
-
-          for (let h = 0; h < textSegments[i].tagInfos[j].attributes.length; h += 1) {
-            lastElement.setAttribute(
-              textSegments[i].tagInfos[j].attributes[h].name,
-              textSegments[i].tagInfos[j].attributes[h].value
-            );
-          }
-
-          lastElement.appendChild(newElement);
-          newElement = lastElement;
-        }
+        newElement = createElementFromTextSegmentInfo(textSegments[i].innertext, textSegments[i].tagInfos);
         if (newElement) range?.insertNode(newElement);
       } else if (textSegments[i].tagInfos[0]?.name === 'BR') {
         newElement = document.createElement('br');
@@ -243,19 +280,44 @@ const changeSelectionTag = (
   }
 };
 
+const createElementFromTextSegmentInfo = (innertext: string | null, tagInfos: TagInfo[]): Element | null => {
+  let lastElement;
+  let newElement;
+
+  if (innertext) newElement = document.createTextNode(innertext);
+  if (newElement?.nodeValue?.length) {
+    for (let j = tagInfos.length - 1; j >= 0; j -= 1) {
+      lastElement = document.createElement(tagInfos[j].name.toLowerCase());
+
+      for (let h = 0; h < tagInfos[j].attributes.length; h += 1) {
+        lastElement.setAttribute(tagInfos[j].attributes[h].name, tagInfos[j].attributes[h].value);
+      }
+      lastElement.appendChild(newElement as Element);
+      newElement = lastElement;
+    }
+    return newElement as Element;
+  }
+  return null;
+};
+
 const insertTag = (
-  tagName: string,
-  attributes: AttributeInfo[] | null,
   divRef: React.MutableRefObject<HTMLDivElement | null>,
-  range: Range | null
+  tagName: string,
+  attributes?: AttributeInfo[] | null,
+  keyboardEvent?: KeyboardEvent
 ): void => {
-  const newContainerRef = divRef;
-  if (newContainerRef?.current) {
+  if (divRef?.current) {
     const selection = window.getSelection();
+    const range = selection?.getRangeAt(0);
     const offset = selection?.getRangeAt(0).startOffset;
-    if (range?.commonAncestorContainer && !divRef?.current?.contains(range?.commonAncestorContainer)) {
+    if (
+      (range && range?.commonAncestorContainer && !divRef?.current?.contains(range?.commonAncestorContainer)) ||
+      !range?.commonAncestorContainer.nodeValue
+    ) {
       return;
     }
+
+    keyboardEvent?.preventDefault();
 
     if (
       (range?.commonAncestorContainer.nodeType === Node.TEXT_NODE &&
@@ -280,15 +342,14 @@ const insertTag = (
     }
 
     const textSegmentInfo: TextSegmentInfo = { tagInfos: [], innertext: '' };
-    const textnode = range?.commonAncestorContainer;
-    let node = range?.commonAncestorContainer.parentNode;
-    let node2;
-    while ((node as Element).id !== WE_EDITOR_ID) {
+
+    textSegmentInfo.innertext = range?.commonAncestorContainer.nodeValue;
+    let candidateParentElement = range?.commonAncestorContainer.parentElement as Element;
+    let candidateElement;
+    while (candidateParentElement?.id !== WE_EDITOR_ID) {
       const tagInfo: TagInfo = { name: '', attributes: [] };
-      tagInfo.name = node?.nodeName ?? '';
-      textSegmentInfo.tagInfos.push(tagInfo);
-      node2 = node;
-      const element: Element = node as Element;
+      tagInfo.name = candidateParentElement?.nodeName ?? '';
+      const element: Element = candidateParentElement as Element;
       element.getAttributeNames().map((item) => {
         const newAttributeInfo: AttributeInfo = {
           name: item,
@@ -297,31 +358,20 @@ const insertTag = (
         tagInfo.attributes.push(newAttributeInfo);
         return null;
       });
-      if (node) node = node.parentNode;
+      textSegmentInfo.tagInfos.push(tagInfo);
+      candidateElement = candidateParentElement;
+      candidateParentElement = candidateParentElement.parentElement as Element;
     }
-    (node2 as Element).remove();
-
-    let lastElement;
-    let newElement;
-
-    if (textnode?.nodeValue && offset !== undefined)
-      newElement = document.createTextNode(textnode?.nodeValue?.substring(offset, textnode?.nodeValue.length));
-    if (newElement?.nodeValue?.length) {
-      for (let j = textSegmentInfo.tagInfos.length - 1; j >= 0; j -= 1) {
-        lastElement = document.createElement(textSegmentInfo.tagInfos[j].name.toLowerCase());
-
-        for (let h = 0; h < textSegmentInfo.tagInfos[j].attributes.length; h += 1) {
-          lastElement.setAttribute(
-            textSegmentInfo.tagInfos[j].attributes[h].name,
-            textSegmentInfo.tagInfos[j].attributes[h].value
-          );
-        }
-
-        lastElement.appendChild(newElement as Element);
-        newElement = lastElement;
-      }
-      if (newElement) range?.insertNode(newElement);
+    candidateElement?.remove();
+    if (!textSegmentInfo.innertext || offset === undefined) {
+      return;
     }
+    let newElement = createElementFromTextSegmentInfo(
+      textSegmentInfo.innertext.substring(offset, textSegmentInfo.innertext?.length),
+      textSegmentInfo.tagInfos
+    );
+    if (newElement) range?.insertNode(newElement);
+
     const tag = document.createElement(tagName);
     if (attributes && attributes.length > 0) {
       for (let h = 0; h < attributes.length; h += 1) {
@@ -329,24 +379,12 @@ const insertTag = (
       }
     }
     range?.insertNode(tag);
+    newElement = createElementFromTextSegmentInfo(
+      textSegmentInfo.innertext.substring(0, offset),
+      textSegmentInfo.tagInfos
+    );
+    if (newElement) range?.insertNode(newElement);
 
-    if (textnode?.nodeValue) newElement = document.createTextNode(textnode?.nodeValue?.substring(0, offset));
-    if (newElement?.nodeValue?.length) {
-      for (let j = textSegmentInfo.tagInfos.length - 1; j >= 0; j -= 1) {
-        lastElement = document.createElement(textSegmentInfo.tagInfos[j].name.toLowerCase());
-
-        for (let h = 0; h < textSegmentInfo.tagInfos[j].attributes.length; h += 1) {
-          lastElement.setAttribute(
-            textSegmentInfo.tagInfos[j].attributes[h].name,
-            textSegmentInfo.tagInfos[j].attributes[h].value
-          );
-        }
-
-        lastElement.appendChild(newElement as Element);
-        newElement = lastElement;
-      }
-      if (newElement) range?.insertNode(newElement);
-    }
     range?.setStartAfter(tag);
     range?.setEndAfter(tag);
     range?.collapse(false);
@@ -355,4 +393,11 @@ const insertTag = (
   }
 };
 
-export { deepCopyTextSegmentInfo, getTextSegments, changeSelectionTag, insertTag };
+export {
+  deepCopyTextSegmentInfo,
+  getTextSegments,
+  changeSelectionTag,
+  getStartEndIndexOfRange,
+  checkEverySegmentsHaveThisTag,
+  insertTag,
+};
