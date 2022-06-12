@@ -27,57 +27,73 @@ function deepCopyTextSegmentInfo(textSegmentInfo: TextSegmentInfo): TextSegmentI
   return newTextSegmentInfo;
 }
 
-function getNodeIndex(childNodes: NodeListOf<ChildNode>, element: Element, offset: number) {
-  let nodeIndex = -1;
-  let newElement = element;
-  const childNodeArray = Array.from(childNodes);
+export function getSelectionInfo() {
+  const selection = window.getSelection();
 
-  // <br> tag process
-  if (newElement.id === WE_EDITOR_ID) {
-    newElement = newElement.childNodes[offset] as Element;
-    nodeIndex = childNodeArray.indexOf(newElement);
-  }
-
-  if (newElement.parentElement?.id === WE_EDITOR_ID) {
-    nodeIndex = childNodeArray.indexOf(newElement);
-  }
-
-  while (newElement.parentElement?.id !== WE_EDITOR_ID) {
-    if (newElement) newElement = newElement.parentElement as Element;
-    nodeIndex = childNodeArray.indexOf(newElement);
-  }
-
-  return nodeIndex;
+  return selection && selection.type === SELECTION_RANGE
+    ? { range: selection.getRangeAt(0), isSelectRange: true }
+    : { range: null, isSelectRange: false };
 }
 
-const getStartEndIndexOfRange = (divRef: React.MutableRefObject<HTMLDivElement | null>, range: Range): number[] => {
-  if (!divRef.current) {
-    throw new Error('divRef.current not found');
-  }
-
-  const startElement = range.startContainer as Element;
-  const endElement = range.endContainer as Element;
-
-  if (!startElement) {
-    throw new Error('startElement not found');
-  }
-
-  const startIndex = getNodeIndex(divRef.current.childNodes, startElement, range.startOffset);
-  const endIndex = getNodeIndex(divRef.current.childNodes, endElement, range.endOffset);
-  return [startIndex, endIndex];
-};
-
-const removeChildNodes = (
+const changeSelectionTag = (
   divRef: React.MutableRefObject<HTMLDivElement | null>,
-  startIndex: number,
-  endIndex: number
-) => {
-  if (!divRef.current) {
-    throw new Error('divRef.current not found');
+  changeTagName: keyof HTMLElementTagNameMap,
+  attributes?: AttributeInfo[]
+): void => {
+  const selection = window.getSelection();
+  const { range } = getSelectionInfo();
+
+  if (!divRef) {
+    throw new Error('divRef not found');
   }
-  const { childNodes } = divRef.current;
-  for (let q = startIndex; q <= endIndex; q += 1) {
-    childNodes[startIndex].remove();
+
+  if (selection && range) {
+    const [startIndex, endIndex] = getStartEndIndexOfRange(divRef, range);
+    const textSegments = getTextSegments(divRef, range, startIndex, endIndex);
+
+    if (!textSegments) {
+      return;
+    }
+
+    removeChildNodes(divRef, startIndex, endIndex);
+
+    const allSegmentsHaveTag = checkEverySegmentsHaveThisTag(changeTagName, textSegments);
+
+    if (allSegmentsHaveTag === true) {
+      for (let i = 1; i < textSegments.length - 1; i += 1) {
+        textSegments[i].tagInfos = textSegments[i].tagInfos.filter(
+          (element) => element.name !== changeTagName.toUpperCase()
+        );
+      }
+    } else {
+      for (let i = 1; i < textSegments.length - 1; i += 1) {
+        const tagNames: string[] = [];
+        textSegments[i].tagInfos.map((item) => {
+          tagNames.push(item.name);
+          return null;
+        });
+
+        if (tagNames.indexOf(changeTagName.toUpperCase()) === -1) {
+          const tagInfo: TagInfo = {
+            name: changeTagName.toUpperCase(),
+            attributes: attributes ?? [],
+          };
+          textSegments[i].tagInfos.push(tagInfo);
+        }
+      }
+    }
+
+    for (let i = textSegments.length - 1; i >= 0; i -= 1) {
+      let newElement;
+      if (textSegments[i].innertext) {
+        newElement = createElementFromTextSegmentInfo(textSegments[i].innertext, textSegments[i].tagInfos);
+        if (newElement) range?.insertNode(newElement);
+      } else if (textSegments[i].tagInfos[0]?.name === 'BR') {
+        newElement = document.createElement('br');
+        range?.insertNode(newElement);
+      }
+    }
+    selection.removeAllRanges();
   }
 };
 
@@ -168,13 +184,59 @@ const getTextSegments = (
   return textSegments;
 };
 
-export function getSelectionInfo() {
-  const selection = window.getSelection();
+function getNodeIndex(childNodes: NodeListOf<ChildNode>, element: Element, offset: number) {
+  let nodeIndex = -1;
+  let newElement = element;
+  const childNodeArray = Array.from(childNodes);
 
-  return selection && selection.type === SELECTION_RANGE
-    ? { range: selection.getRangeAt(0), isSelectRange: true }
-    : { range: null, isSelectRange: false };
+  // <br> tag process
+  if (newElement.id === WE_EDITOR_ID) {
+    newElement = newElement.childNodes[offset] as Element;
+    nodeIndex = childNodeArray.indexOf(newElement);
+  }
+
+  if (newElement.parentElement?.id === WE_EDITOR_ID) {
+    nodeIndex = childNodeArray.indexOf(newElement);
+  }
+
+  while (newElement.parentElement?.id !== WE_EDITOR_ID) {
+    if (newElement) newElement = newElement.parentElement as Element;
+    nodeIndex = childNodeArray.indexOf(newElement);
+  }
+
+  return nodeIndex;
 }
+
+const getStartEndIndexOfRange = (divRef: React.MutableRefObject<HTMLDivElement | null>, range: Range): number[] => {
+  if (!divRef.current) {
+    throw new Error('divRef.current not found');
+  }
+
+  const startElement = range.startContainer as Element;
+  const endElement = range.endContainer as Element;
+
+  if (!startElement) {
+    throw new Error('startElement not found');
+  }
+
+  const startIndex = getNodeIndex(divRef.current.childNodes, startElement, range.startOffset);
+  const endIndex = getNodeIndex(divRef.current.childNodes, endElement, range.endOffset);
+  return [startIndex, endIndex];
+};
+
+const removeChildNodes = (
+  divRef: React.MutableRefObject<HTMLDivElement | null>,
+  startIndex: number,
+  endIndex: number
+) => {
+  if (!divRef.current) {
+    throw new Error('divRef.current not found');
+  }
+  const { childNodes } = divRef.current;
+  for (let q = startIndex; q <= endIndex; q += 1) {
+    childNodes[startIndex].remove();
+  }
+};
 
 const checkEverySegmentsHaveThisTag = (
   tagName: keyof HTMLElementTagNameMap,
@@ -218,68 +280,6 @@ const checkEverySegmentsHaveThisTag = (
   return allSegmentsHaveTag;
 };
 
-const changeSelectionTag = (
-  divRef: React.MutableRefObject<HTMLDivElement | null>,
-  changeTagName: keyof HTMLElementTagNameMap,
-  attributes?: AttributeInfo[]
-): void => {
-  const selection = window.getSelection();
-  const { range } = getSelectionInfo();
-
-  if (!divRef) {
-    throw new Error('divRef not found');
-  }
-
-  if (selection && range) {
-    const [startIndex, endIndex] = getStartEndIndexOfRange(divRef, range);
-    const textSegments = getTextSegments(divRef, range, startIndex, endIndex);
-
-    if (!textSegments) {
-      return;
-    }
-
-    removeChildNodes(divRef, startIndex, endIndex);
-
-    const allSegmentsHaveTag = checkEverySegmentsHaveThisTag(changeTagName, textSegments);
-
-    if (allSegmentsHaveTag === true) {
-      for (let i = 1; i < textSegments.length - 1; i += 1) {
-        textSegments[i].tagInfos = textSegments[i].tagInfos.filter(
-          (element) => element.name !== changeTagName.toUpperCase()
-        );
-      }
-    } else {
-      for (let i = 1; i < textSegments.length - 1; i += 1) {
-        const tagNames: string[] = [];
-        textSegments[i].tagInfos.map((item) => {
-          tagNames.push(item.name);
-          return null;
-        });
-
-        if (tagNames.indexOf(changeTagName.toUpperCase()) === -1) {
-          const tagInfo: TagInfo = {
-            name: changeTagName.toUpperCase(),
-            attributes: attributes ?? [],
-          };
-          textSegments[i].tagInfos.push(tagInfo);
-        }
-      }
-    }
-
-    for (let i = textSegments.length - 1; i >= 0; i -= 1) {
-      let newElement;
-      if (textSegments[i].innertext) {
-        newElement = createElementFromTextSegmentInfo(textSegments[i].innertext, textSegments[i].tagInfos);
-        if (newElement) range?.insertNode(newElement);
-      } else if (textSegments[i].tagInfos[0]?.name === 'BR') {
-        newElement = document.createElement('br');
-        range?.insertNode(newElement);
-      }
-    }
-    selection.removeAllRanges();
-  }
-};
-
 const createElementFromTextSegmentInfo = (innertext: string | null, tagInfos: TagInfo[]): Element | null => {
   let lastElement;
   let newElement;
@@ -310,9 +310,10 @@ const insertTag = (
     const selection = window.getSelection();
     const range = selection?.getRangeAt(0);
     const offset = selection?.getRangeAt(0).startOffset;
+
     if (
-      (range && range?.commonAncestorContainer && !divRef?.current?.contains(range?.commonAncestorContainer)) ||
-      !range?.commonAncestorContainer.nodeValue
+      (range && range.commonAncestorContainer && !divRef?.current?.contains(range.commonAncestorContainer)) ||
+      range?.commonAncestorContainer.nodeValue === undefined
     ) {
       return;
     }
@@ -366,19 +367,24 @@ const insertTag = (
     if (!textSegmentInfo.innertext || offset === undefined) {
       return;
     }
+
     let newElement = createElementFromTextSegmentInfo(
       textSegmentInfo.innertext.substring(offset, textSegmentInfo.innertext?.length),
       textSegmentInfo.tagInfos
     );
+
     if (newElement) range?.insertNode(newElement);
 
     const tag = document.createElement(tagName);
+
     if (attributes && attributes.length > 0) {
       for (let h = 0; h < attributes.length; h += 1) {
         tag.setAttribute(attributes[h].name, attributes[h].value);
       }
     }
+
     range?.insertNode(tag);
+
     newElement = createElementFromTextSegmentInfo(
       textSegmentInfo.innertext.substring(0, offset),
       textSegmentInfo.tagInfos

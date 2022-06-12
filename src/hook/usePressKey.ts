@@ -19,7 +19,6 @@ function usePressKey(divRef: React.MutableRefObject<HTMLDivElement | null>) {
         return;
       }
       insertTag(newDivRef, 'br', null, e);
-      e.preventDefault();
     };
   }, [divRef]);
 }
