@@ -2,9 +2,8 @@ import * as React from 'react';
 import styled from '@emotion/styled';
 import { css } from '@emotion/react';
 import { BiBold, BiUnderline, BiItalic, BiLink } from 'react-icons/bi';
-import { changeSelectionTag } from '../common/function';
-import useSelection from '../hook/useSelection';
 import useToolbar from './useToolbar';
+import ToolButton from './ToolButton';
 
 interface ToolbarProps {
   divRef: React.MutableRefObject<HTMLDivElement | null>;
@@ -17,36 +16,10 @@ function Toolbar({ divRef }: ToolbarProps) {
   return (
     <ToolbarWrapper toolbarRef={toolbarRef} showToolbar={showToolbar} toolbarPosition={toolbarPosition}>
       <ButtonWrapper>
-        <ToolButton
-          onClick={() => {
-            changeSelectionTag(divRef, 'b');
-          }}
-        >
-          <BiBold size="20" />
-        </ToolButton>
-        <ToolButton
-          onClick={() => {
-            changeSelectionTag(divRef, 'u');
-          }}
-        >
-          <BiUnderline size="20" />
-        </ToolButton>
-        <ToolButton
-          onClick={() => {
-            changeSelectionTag(divRef, 'i');
-          }}
-        >
-          <BiItalic size="20" />
-        </ToolButton>
-        <ToolButton
-          onClick={() => {
-            const url = prompt('URL을 입력하세요', '');
-            if (!url) return;
-            changeSelectionTag(divRef, 'a', [{ name: 'href', value: url }]);
-          }}
-        >
-          <BiLink size="20" />
-        </ToolButton>
+        <ToolButton divRef={divRef} changeTagName="b" Icon={BiBold} />
+        <ToolButton divRef={divRef} changeTagName="u" Icon={BiUnderline} />
+        <ToolButton divRef={divRef} changeTagName="i" Icon={BiItalic} />
+        <ToolButton divRef={divRef} changeTagName="a" Icon={BiLink} InputAttributeName="href" />
       </ButtonWrapper>
     </ToolbarWrapper>
   );
@@ -59,19 +32,6 @@ type ToolbarWrapperProps = {
   toolbarPosition: [number, number];
   toolbarRef: React.MutableRefObject<HTMLDivElement | null>;
 };
-
-const ToolButton = styled.button`
-  padding: 10px 10px 6px 10px;
-  box-sizing: border-box;
-  vertical-align: center;
-  border: 0px rgb(230, 230, 230) solid;
-  color: #757575;
-  background-color: rgba(255, 255, 255, 0);
-  &:hover {
-    color: rgb(95, 205, 196);
-    cursor: pointer;
-  }
-`;
 
 const ToolbarWrapper = styled.div`
   transition: opacity 0.2s, margin-top 0.2s;
