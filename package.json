@@ -1,7 +1,7 @@
 {
-  "name": "we-editor",
+  "name": "we-editool",
   "version": "1.0.0",
-  "description": "light-weight, tagless and simple text editor!",
+  "description": "light-weight, tagless and simple text edit tool!",
   "main": "dist/index.js",
   "module": "lib/index.js",
   "repository": {
@@ -26,10 +26,9 @@
     "prettier": "prettier --write --config ./.prettierrc './src/**/*.{ts,tsx}'"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^22.0.0",
-    "@rollup/plugin-node-resolve": "^13.3.0",
     "@testing-library/react": "13.2.0",
     "@types/jest": "27.5.1",
+    "@types/marked": "^4.0.3",
     "@types/react": "18.0.9",
     "@typescript-eslint/eslint-plugin": "5.25.0",
     "@typescript-eslint/parser": "5.25.0",
@@ -48,15 +47,18 @@
     "react-dom": "18.1.0",
     "rollup": "2.74.1",
     "rollup-plugin-analyzer": "4.0.0",
+    "rollup-plugin-node-externals": "^4.0.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-typescript2": "0.31.2",
     "ts-jest": "28.0.3",
     "typescript": "4.6.4"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@emotion/react": "11.9.0",
     "@emotion/styled": "11.8.1",
-    "react": "18.1.0",
+    "marked": "4.0.16",
+    "node-html-markdown": "1.2.0",
+    "react": "^18.1.0",
     "react-icons": "4.3.1"
   }
 }

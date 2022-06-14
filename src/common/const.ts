@@ -1,6 +1,4 @@
 const SELECTION_RANGE = 'Range';
-const BR_NAME = 'BR';
 const WE_EDITOR_ID = 'we_editor_id';
-const TEXT_NODE_TYPE = 3;
 
-export { SELECTION_RANGE, BR_NAME, WE_EDITOR_ID, TEXT_NODE_TYPE };
+export { SELECTION_RANGE, WE_EDITOR_ID };

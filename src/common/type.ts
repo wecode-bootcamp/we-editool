@@ -7,12 +7,12 @@ interface TextSegmentInfo {
 
 interface TagInfo {
   name: string;
-  attributes: AttributeInfo[];
+  attributes: Attribute[];
 }
 
-interface AttributeInfo {
+interface Attribute {
   name: string;
   value: string;
 }
 
-export { ToolbarPostion, TextSegmentInfo, TagInfo, AttributeInfo };
+export { ToolbarPostion, TextSegmentInfo, TagInfo, Attribute };

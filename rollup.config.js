@@ -1,8 +1,7 @@
 import typescript from 'rollup-plugin-typescript2';
-import analyze from 'rollup-plugin-analyzer';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
 import peerDepsExternal from 'rollup-plugin-peer-deps-external';
+import externals from 'rollup-plugin-node-externals';
+import analyze from 'rollup-plugin-analyzer';
 import packageJSON from './package.json';
 
 export default {
@@ -19,13 +18,12 @@ export default {
   ],
   plugins: [
     typescript(),
+    peerDepsExternal(),
+    externals(),
     analyze({
       // TODO: Add size_limit for CI
       onAnalysis: ({ bundleSize }) => {},
       summaryOnly: true,
     }),
-    nodeResolve(),
-    commonjs(),
-    peerDepsExternal(),
   ],
 };
