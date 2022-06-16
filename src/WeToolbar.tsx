@@ -12,6 +12,30 @@ export interface WeToolbarProps {
   editorRef: React.RefObject<HTMLDivElement>;
 }
 
+/**
+ * `WeToolbar` is simple text edit toolbar component.
+ *
+ *
+ * @example
+ * ```typescript
+ * import React from 'react';
+ * import { WeToolbar, htmlToMarkdown, WE_EDITOR_ID } from 'we-editor';
+ *
+ * function CustomEditor() {
+ *   const editorRef = useRef<HTMLDivElement>(null);
+ *
+ *   const getHTML = () => editorRef.current?.innerHTML;
+ *   const getMarkdown = () => htmlToMarkdown(editorRef.current?.innerHTML);
+ *
+ *   return (
+ *     <>
+ *       <div contentEditable id={WE_EDITOR_ID} className="editor" ref={editorRef} />
+ *       <WeToolbar editorRef={editorRef} />
+ *     </>
+ *   );
+ * }
+ * ```
+ */
 export function WeToolbar({ editorRef }: WeToolbarProps) {
   const toolbarRef = React.useRef<HTMLDivElement>(null);
   const { toolbarPosition, showToolbar } = useToolbar(editorRef);

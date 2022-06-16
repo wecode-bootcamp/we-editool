@@ -19,7 +19,7 @@ export interface WeEditorProps extends React.HTMLAttributes<HTMLDivElement> {
 /**
  * `WeEditor` is lightweight, tag-less and simple editor.
  *
- *
+ * @example
  * ```typescript
  * import { WeEditor, WeEditorRef } from "we-editor";
  * function ReactFunctionComponent() {
@@ -34,13 +34,13 @@ export interface WeEditorProps extends React.HTMLAttributes<HTMLDivElement> {
  * }
  * ```
  */
-export const WeEditor = React.forwardRef<WeEditorRef, WeEditorProps>(
+export const WeEditor = React.forwardRef<WeEditorRef, Omit<WeEditorProps, 'id' | 'contentEditable'>>(
   ({ initialHTML, initialMarkdown, ...divProps }, forwardedRef) => {
     const divRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
       if (initialHTML && initialMarkdown) {
-        console.warn('we-editool: html state will override because markdown state imported together');
+        console.warn('we-editool: html state will override because markdown state import together');
       }
 
       if (divRef.current && initialHTML) {
