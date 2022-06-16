@@ -8,9 +8,15 @@ describe('component: WeEditor', () => {
     expect(result).toMatchSnapshot();
   });
 
-  test('called getHTMLString has string value', () => {
+  test('called getHTML is string value', () => {
     const ref = React.createRef<WeEditorRef>();
     render(<WeEditor ref={ref} />);
-    expect(ref.current?.getHTMLState()).toBe('');
+    expect(typeof ref.current?.getHTML()).toBe('string');
+  });
+
+  test('called getMarkdown is string value', () => {
+    const ref = React.createRef<WeEditorRef>();
+    render(<WeEditor ref={ref} />);
+    expect(typeof ref.current?.getMarkdown()).toBe('string');
   });
 });

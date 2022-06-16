@@ -1,14 +1,10 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`component: WeEditor WeEditor render 1`] = `
+exports[`component: WeToolbar WeToolbar render 1`] = `
 Object {
   "asFragment": [Function],
   "baseElement": <body>
     <div>
-      <div
-        contenteditable="true"
-        id="we_editor_id"
-      />
       <div
         class="css-17b6vo2"
       >
@@ -91,10 +87,6 @@ Object {
     </div>
   </body>,
   "container": <div>
-    <div
-      contenteditable="true"
-      id="we_editor_id"
-    />
     <div
       class="css-17b6vo2"
     >
