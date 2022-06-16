@@ -1,25 +1,25 @@
 import React from 'react';
 import insertTag from '../function/insertTag';
 
-function usePressKey(divRef: React.RefObject<HTMLDivElement>) {
+function usePressKey(editorRef: React.RefObject<HTMLDivElement>) {
   React.useEffect(() => {
-    if (!divRef.current) {
+    if (!editorRef.current) {
       return;
     }
 
-    divRef.current.onkeyup = () => {
+    editorRef.current.onkeyup = () => {
       const { activeElement } = document;
       if (activeElement?.lastChild?.nodeName !== 'BR') {
         activeElement?.appendChild(document.createElement('br'));
       }
     };
 
-    divRef.current.onkeydown = (e) => {
+    editorRef.current.onkeydown = (e) => {
       if (e.key === 'Enter') {
-        insertTag(divRef, 'br', null, e);
+        insertTag(editorRef, 'br', null, e);
       }
     };
-  }, [divRef]);
+  }, [editorRef]);
 }
 
 export default usePressKey;
