@@ -7,16 +7,11 @@ import getTextSegments from './getTextSegments';
 import removeChildNodes from './removeChildNodes';
 
 export default function changeSelectionTag(
+  selection: Selection,
   divRef: React.RefObject<HTMLDivElement>,
   changeTagName: keyof HTMLElementTagNameMap,
   attributes?: Attribute[]
 ) {
-  const selection = window?.getSelection();
-
-  if (!selection) {
-    throw new Error('no selection');
-  }
-
   const { range } = getSelectionInfo(selection);
   const [startIndex, endIndex] = getStartEndIndexOfRange(divRef, range);
   const textSegments = getTextSegments(divRef, range, startIndex, endIndex);

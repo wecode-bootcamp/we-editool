@@ -104,20 +104,29 @@ interface ToolbarButtonProps {
 
 function ToolbarButton({ divRef, changeTagName, Icon, Attributes, InputAttributeName }: ToolbarButtonProps) {
   const onClickCallBack = () => {
+    const selection = window?.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
     if (!InputAttributeName) {
-      if (Attributes) changeSelectionTag(divRef, changeTagName, Attributes);
-      else changeSelectionTag(divRef, changeTagName);
+      if (Attributes) changeSelectionTag(selection, divRef, changeTagName, Attributes);
+      else changeSelectionTag(selection, divRef, changeTagName);
       return;
     }
 
     if (checkEverySegmentsHaveThisTag(changeTagName, [], divRef)) {
-      changeSelectionTag(divRef, changeTagName);
+      changeSelectionTag(selection, divRef, changeTagName);
     } else {
       const newValue = prompt('URL을 입력하세요', '');
       if (!newValue) return;
       if (Attributes)
-        changeSelectionTag(divRef, changeTagName, [...Attributes, { name: InputAttributeName, value: newValue }]);
-      else changeSelectionTag(divRef, changeTagName, [{ name: InputAttributeName, value: newValue }]);
+        changeSelectionTag(selection, divRef, changeTagName, [
+          ...Attributes,
+          { name: InputAttributeName, value: newValue },
+        ]);
+      else changeSelectionTag(selection, divRef, changeTagName, [{ name: InputAttributeName, value: newValue }]);
     }
   };
 
