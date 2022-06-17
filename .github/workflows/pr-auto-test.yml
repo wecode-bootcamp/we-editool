@@ -1,10 +1,7 @@
-name: on-pr-test
+name: pr-test-automation
 on:
   pull_request:
-    types:
-      - opened
-    paths:
-      - 'src/**'
+
 jobs:
   on-pr-test:
     runs-on: ubuntu-latest

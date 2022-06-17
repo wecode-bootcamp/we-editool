@@ -1,9 +1,12 @@
-# (개발용)
+## This is ...
 
-## 개요
+- [ ] feature
+- [ ] fix
+- [ ] bug
+- [ ] documentation
+- [ ] refactoring
+- [ ] deploy
 
-- 내용을 적어주세요.
+## Summary
 
-## 작업 내용
-
-- 내용을 적어주세요.
+## How did you test this change?
